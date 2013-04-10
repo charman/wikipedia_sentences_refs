@@ -1,0 +1,6 @@
+-e git+https://github.com/callison-burch/wpTextExtractor#egg=wpTextExtractor
+-e git+https://github.com/callison-burch/wikipydia#egg=wikipydia
+beautifulsoup4
+lxml
+mwlib
+nltk
