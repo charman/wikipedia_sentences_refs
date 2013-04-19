@@ -4,6 +4,7 @@ import lxml.etree
 import urllib
 import nltk  # for now.
 import re
+import sys
 from wpTextExtractor import wiki2sentences
 from bs4 import BeautifulSoup
 from string_scanner.scanner import Scanner
@@ -11,53 +12,27 @@ import mwparserfromhell
 
 title = "Barack Obama"
 
+            # anything inside </ref> tags.
+REFTAG_OPEN_RE = re.compile(r'<ref.*?>', re.MULTILINE | re.DOTALL)
+REFTAG_CLOSE_RE = re.compile(r'</ref>', re.MULTILINE | re.DOTALL)
+TEMPLATE_OPEN_RE = re.compile(r'{{', re.MULTILINE | re.DOTALL)
+TEMPLATE_CLOSE_RE = re.compile(r'}}', re.MULTILINE | re.DOTALL)
+
 def scrape_wikitext(title):
-    params = { "format":"xml", "action":"query", "prop":"revisions", "rvprop":"timestamp|user|comment|content" }
+    params = {
+        "format":"xml",
+        "action":"query",
+        "prop":"revisions",
+        "rvprop":"timestamp|user|comment|content"
+    }
     params["titles"] = "API|%s" % urllib.quote(title.encode("utf8"))
     qs = "&".join("%s=%s" % (k, v)  for k, v in params.items())
     url = "http://en.wikipedia.org/w/api.php?%s" % qs
     tree = lxml.etree.parse(urllib.urlopen(url))
     revs = tree.xpath('//rev')
-    return revs[-1].text.encode('utf8')
-
-
-def remove_refs_with_no_url(wikitext):
-    pass
-
-def remove_refs_with_no_url(wikitext):
-    return re.sub(
-        r'<ref>[^<]*(?!url)</ref>',
-        '',
-        wikitext,
-        re.MULTILINE | re.UNICODE,
-        )
-
-def replace_refs_with_url(wikitext):
-
-    # def next_ref_num():
-    #     ref_num = 0
-    #     while True:
-    #         yield ref_num
-    #         ref_num += 1
-
-    # return
-    #     re.sub(
-    #         r'<ref>[^<]*url\s*=\s*()[^<]*</ref>',
-    #         ' coereftag ',
-    #         wikitext,
-    #         re.MULTILINE | re.UNICODE,
-    #         ),
-    #     )
-
-    # FYI: Alternative implementation
-
-    soup = BeautifulSoup(wikitext)
-    refs = soup.find_all('ref')
-    ref_urls = []
-    for i,r in enumerate(refs):
-        r.replace_with(' coeref%i ' % i)
-        ref_urls.append('http://www.wildplaces.co.uk/descent/descent168.html')
-    return soup.text, ref_urls
+    wikitext = revs[-1].text.replace('\t', ' ')
+    # remove everything starting with the '<references\s*/>' tag.
+    return re.split(r'<references\s*/>', wikitext)[0]
 
 def split_sentences(wikitext):
     """
@@ -68,22 +43,13 @@ def split_sentences(wikitext):
     sent_detector = nltk.data.load(
             'tokenizers/punkt/%s.pickle' % 'english'
         ).tokenize
-    all_sentences = wiki2sentences(wikitext, sent_detector, True)[0]
-
-    # Only return sentences that occur above a "References" line.
-    results = []
-    for sentence in all_sentences:
-        if sentence != 'References':
-            results.append(sentence)
-        else:
-            break
-    return results
+    return wiki2sentences(wikitext, sent_detector, True)[0]
 
 def extract_ref_urls_from_wikitext(wikitext):
     wikicode = mwparserfromhell.parse(wikitext)
     url_templates = wikicode.filter_templates(
             recursive=True,
-            matches=r'{cite|Citation}.*'
+            matches=r'[cC]it\w+'
         )
     result = []
     for ut in url_templates:
@@ -91,27 +57,38 @@ def extract_ref_urls_from_wikitext(wikitext):
             result.append(ut.get('url').split('=')[-1].strip())
     return result
 
+def get_next_wikitext_chunk(scanner, token):
+    #token_re = re.compile(token, re.MULTILINE | re.DOTALL)
+    token_re = re.compile(token)
+    num_reftag_open = 0
+    num_reftag_close = -1
+    num_template_open = 0
+    num_template_close = -1
+    wikitext_chunk = ''
+    while num_reftag_open > num_reftag_close or \
+            num_template_open > num_template_close:
+        # If this is not the first time through the loop, the token was found
+        # inside a pair of <ref></ref> tags.
+        if num_reftag_close == -1:
+            num_reftag_close = 0
+        if num_template_close == -1:
+            num_template_close = 0
+        #sys.stderr.write(scanner.check_until(token))
+        next_chunk = scanner.scan_to(token_re)
+        scanner.scan(token_re)
+        if next_chunk:
+            num_reftag_open += len(REFTAG_OPEN_RE.findall(next_chunk))
+            num_reftag_close += len(REFTAG_CLOSE_RE.findall(next_chunk))
+            num_template_open += len(TEMPLATE_OPEN_RE.findall(next_chunk))
+            num_template_close += len(TEMPLATE_CLOSE_RE.findall(next_chunk))
+            wikitext_chunk = ''.join([wikitext_chunk, next_chunk, token])
+        #sys.stderr.write(wikitext_chunk)
+    return wikitext_chunk
 
-if __name__ == '__main__':
-    #title = 'Aquamole Pot'
-    title = 'Barack Obama'
-
-    # download page in wikitext format
-    wikitext = scrape_wikitext(title)
-
-    # Delete everthing from the first `<references\s*/>' tag to the end.
-
-    # Render as plain text without tags and templates
-    # Split into sentences, Save the sentences.
-    sentences = split_sentences(wikitext)
-
+def collect_citations(sentences, wikitext):
     # Build a list of lists of tokens by splitting each sentence by
     # non-alphabet into tokens.
     sent_tokens = [re.split(r'[^a-zA-Z]+', sent) for sent in sentences]
-
-    # For each sentence-level list, scan the original wikitext for each token,
-    # collecting the citations that have URLs, saving the URLs and the sentence
-    # number that they belong to.
     scanner = Scanner()
     scanner.string = wikitext
     result = []
@@ -123,23 +100,54 @@ if __name__ == '__main__':
             # The first word of the next sentence:
             tokens.append(sent_tokens[sent_number + 1][0])
         for token in tokens:
-            # Get all the text until this token is matched.
-            token_re = re.compile(token)
-            wikitext_chunk = scanner.scan_to(token_re)
+            # Get all the text until this token is matched, but don't match
+            # anything inside <ref.*></ref> tags.
             # Collect the urls in this range.
-            urls.update(extract_ref_urls_from_wikitext(wikitext_chunk))
-            # Scan just past this token.
+            urls.update(extract_ref_urls_from_wikitext(get_next_wikitext_chunk(
+                scanner, token
+            )))
+            #print token.encode('utf8')
         if sent_number == len(sent_tokens) - 1:
             urls.update(extract_ref_urls_from_wikitext(scanner.rest()))
         # Save a list with the sentence text followed by each of the found
         # reference urls.
         result.append([sentences[sent_number]] + list(urls))
+    return result
+
+if __name__ == '__main__':
+    #title = 'Aquamole Pot'
+    #title = 'Barack Obama'
+    if len(sys.argv) != 2:
+        print('usage: %s wikipedia_page_title' % sys.argv[0])
+        sys.exit(2)
+    title = sys.argv[1]
+
+    # download page in wikitext format
+    wikicode = mwparserfromhell.parse(scrape_wikitext(title))
+    for node in wikicode.nodes:
+        try:
+            name = node.name.__unicode__()
+            if not re.match(r'\s*[Cc]it.*', name) \
+                    and not re.match(r'\s*Reflist.*', name):
+                wikicode.remove(node)
+        except AttributeError:
+            pass
+    wikitext = wikicode.__unicode__()
+
+    # Render as plain text without tags and templates
+    # Split into sentences, Save the sentences.
+    sentences = split_sentences(wikitext)
+
+    # For each sentence-level list, scan the original wikitext for each token,
+    # collecting the citations that have URLs, saving the URLs and the sentence
+    # number that they belong to.
+    result = collect_citations(sentences, wikitext)
 
     # ? prune sentences shorter than a threshold (to get rid of headers?
 
-    # Return a list of sentences, each with all its associated URLs separated
+    # Print a list of sentences, each with all its associated URLs separated
     # by tabs.
-    with open('result.tsv', 'w') as fh:
-        for sentence_and_urls in result:
-            line = '\t'.join(sentence_and_urls)
-            fh.write(line.encode('utf8') + '\n')
+    print('\n'.join([
+            '\t'.join(sentence_and_urls) for sentence_and_urls in result
+        ]).encode('utf8')
+    )

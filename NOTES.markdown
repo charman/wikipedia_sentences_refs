@@ -4,6 +4,7 @@ MediaWiki parsers https://www.mediawiki.org/wiki/Alternative_parsers
 
 - https://github.com/earwig/mwparserfromhell/issues/9
   How can I help get this ready? I have an immediate use for filtering by `<ref>` tags. The `<ref name="foo">` is an advanced use of that tag which will need some extra TLC.
+- The `strip_code` method is not implemented.
 
 
 # Citations
