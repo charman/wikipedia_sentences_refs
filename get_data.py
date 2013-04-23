@@ -10,13 +10,30 @@ from bs4 import BeautifulSoup
 from string_scanner.scanner import Scanner
 import mwparserfromhell
 
-title = "Barack Obama"
-
-            # anything inside </ref> tags.
-REFTAG_OPEN_RE = re.compile(r'<ref.*?>', re.MULTILINE | re.DOTALL)
-REFTAG_CLOSE_RE = re.compile(r'</ref>', re.MULTILINE | re.DOTALL)
-TEMPLATE_OPEN_RE = re.compile(r'{{', re.MULTILINE | re.DOTALL)
-TEMPLATE_CLOSE_RE = re.compile(r'}}', re.MULTILINE | re.DOTALL)
+REFTAG_OPEN_RE = re.compile(
+    r'<ref.*?>',
+    re.MULTILINE | re.DOTALL | re.IGNORECASE
+)
+REFTAG_NAMED_OPEN_RE = re.compile(
+    r'<ref.*?name\s*=\s*[\'\"](?P<name>\S+[\'\"]).*?[^\/]>',
+    re.MULTILINE | re.DOTALL | re.IGNORECASE
+)
+REFTAG_CLOSE_RE = re.compile(
+    r'</ref>',
+    re.MULTILINE | re.DOTALL | re.IGNORECASE
+)
+REFTAG_NAMED_COMBINED_RE = re.compile(
+    r'<ref.*?name\s*=\s*[\'\"](?P<name>\S+[\'\"]).*?>',
+    re.MULTILINE | re.DOTALL | re.IGNORECASE
+)
+TEMPLATE_OPEN_RE = re.compile(
+    r'{{',
+    re.MULTILINE | re.DOTALL | re.IGNORECASE
+)
+TEMPLATE_CLOSE_RE = re.compile(
+    r'}}',
+    re.MULTILINE | re.DOTALL | re.IGNORECASE
+)
 
 def scrape_wikitext(title):
     params = {
@@ -48,16 +65,16 @@ def split_sentences(wikitext):
 def extract_ref_urls_from_wikitext(wikitext):
     wikicode = mwparserfromhell.parse(wikitext)
     url_templates = wikicode.filter_templates(
-            recursive=True,
-            matches=r'[cC]it\w+'
-        )
+        recursive=True,
+        matches=r'[cC]it\w+'
+    )
     result = []
     for ut in url_templates:
         if ut.has_param('url'):
             result.append(ut.get('url').split('=')[-1].strip())
     return result
 
-def get_next_wikitext_chunk(scanner, token):
+def _get_next_wikitext_chunk(scanner, token):
     #token_re = re.compile(token, re.MULTILINE | re.DOTALL)
     token_re = re.compile(token)
     num_reftag_open = 0
@@ -85,9 +102,40 @@ def get_next_wikitext_chunk(scanner, token):
         #sys.stderr.write(wikitext_chunk)
     return wikitext_chunk
 
+def get_ref_names_citations(wikitext):
+    """
+    Parse the <ref name="X"></ref> and <ref name = 'X' /> tags and build a
+    mapping of ref tag name to all its associated citation urls.
+
+    Return an empty dict if none is found.
+    """
+    soup = BeautifulSoup(wikitext)
+    result = {}
+    refs = soup.find_all('ref')
+    if not refs:
+        return {}
+    for ref in [ref for ref in refs if 'name' in ref.attrs]:
+        name = ref.attrs['name']
+        urls = extract_ref_urls_from_wikitext(unicode(ref.string))
+        if urls:
+            new_urls = result.get(name, set())
+            new_urls.update(urls)
+            result[name] = new_urls
+    if not result.items():
+        return {}
+    return {k: list(v) for k,v in result.items()}
+
 def collect_citations(sentences, wikitext):
-    # Build a list of lists of tokens by splitting each sentence by
-    # non-alphabet into tokens.
+    """
+    Build a list of lists of tokens by splitting each sentence by non-alphabet
+    into tokens.
+    """
+    ref_names_citations = {}
+    # Parse the wikitext on a first pass:
+    # Extract all the named refs and the citations with URLs found within.
+
+    # Pass through the sentences, Find the name of the ref for each
+
     sent_tokens = [re.split(r'[^a-zA-Z]+', sent) for sent in sentences]
     scanner = Scanner()
     scanner.string = wikitext
@@ -103,7 +151,7 @@ def collect_citations(sentences, wikitext):
             # Get all the text until this token is matched, but don't match
             # anything inside <ref.*></ref> tags.
             # Collect the urls in this range.
-            urls.update(extract_ref_urls_from_wikitext(get_next_wikitext_chunk(
+            urls.update(extract_ref_urls_from_wikitext(_get_next_wikitext_chunk(
                 scanner, token
             )))
             #print token.encode('utf8')
@@ -111,7 +159,7 @@ def collect_citations(sentences, wikitext):
             urls.update(extract_ref_urls_from_wikitext(scanner.rest()))
         # Save a list with the sentence text followed by each of the found
         # reference urls.
-        result.append([sentences[sent_number]] + list(urls))
+        result.append(list(urls))
     return result
 
 if __name__ == '__main__':
@@ -141,13 +189,12 @@ if __name__ == '__main__':
     # For each sentence-level list, scan the original wikitext for each token,
     # collecting the citations that have URLs, saving the URLs and the sentence
     # number that they belong to.
-    result = collect_citations(sentences, wikitext)
+    result = zip(sentences, collect_citations(sentences, wikitext))
 
     # ? prune sentences shorter than a threshold (to get rid of headers?
 
     # Print a list of sentences, each with all its associated URLs separated
     # by tabs.
-    print('\n'.join([
-            '\t'.join(sentence_and_urls) for sentence_and_urls in result
-        ]).encode('utf8')
-    )
+    print(
+        '\n'.join('\t'.join([sentence] + urls) for sentence, urls in result)
+    ).encode('utf8')
