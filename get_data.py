@@ -10,29 +10,33 @@ from bs4 import BeautifulSoup
 from string_scanner.scanner import Scanner
 import mwparserfromhell
 
-REFTAG_OPEN_RE = re.compile(
-    r'<ref.*?>',
-    re.MULTILINE | re.DOTALL | re.IGNORECASE
+TAG_OPEN_RE = re.compile(
+    r'<[^\/].*?[^\/]>',
+    re.MULTILINE | re.DOTALL
 )
-REFTAG_NAMED_OPEN_RE = re.compile(
-    r'<ref.*?name\s*=\s*[\'\"](?P<name>\S+[\'\"]).*?[^\/]>',
-    re.MULTILINE | re.DOTALL | re.IGNORECASE
+#TAG_NAMED_OPEN_RE = re.compile(
+#    r'<ref.*?name\s*=\s*[\'\"](?P<name>\S+[\'\"]).*?[^\/]>',
+#    re.MULTILINE | re.DOTALL | re.IGNORECASE
+#)
+TAG_CLOSE_RE = re.compile(
+    r'<\/.*?[^\/]>',
+    re.MULTILINE | re.DOTALL
 )
-REFTAG_CLOSE_RE = re.compile(
-    r'</ref>',
-    re.MULTILINE | re.DOTALL | re.IGNORECASE
-)
-REFTAG_NAMED_COMBINED_RE = re.compile(
-    r'<ref.*?name\s*=\s*[\'\"](?P<name>\S+[\'\"]).*?>',
-    re.MULTILINE | re.DOTALL | re.IGNORECASE
+#REFTAG_NAMED_COMBINED_RE = re.compile(
+#    r'<ref.*?name\s*=\s*[\'\"](?P<name>\S+[\'\"]).*?>',
+#    re.MULTILINE | re.DOTALL | re.IGNORECASE
+#)
+TAG_OPENCLOSE_RE = re.compile(
+    r'<[^\/].*?\/>',
+    re.MULTILINE | re.DOTALL
 )
 TEMPLATE_OPEN_RE = re.compile(
     r'{{',
-    re.MULTILINE | re.DOTALL | re.IGNORECASE
+    re.MULTILINE | re.DOTALL
 )
 TEMPLATE_CLOSE_RE = re.compile(
     r'}}',
-    re.MULTILINE | re.DOTALL | re.IGNORECASE
+    re.MULTILINE | re.DOTALL
 )
 
 def scrape_wikitext(title):
@@ -63,6 +67,9 @@ def split_sentences(wikitext):
     return wiki2sentences(wikitext, sent_detector, True)[0]
 
 def extract_ref_urls_from_wikitext(wikitext):
+    """
+    Parse the wikitext and get all the urls found in cite/Citation templates.
+    """
     wikicode = mwparserfromhell.parse(wikitext)
     url_templates = wikicode.filter_templates(
         recursive=True,
@@ -72,34 +79,45 @@ def extract_ref_urls_from_wikitext(wikitext):
     for ut in url_templates:
         if ut.has_param('url'):
             result.append(ut.get('url').split('=')[-1].strip())
-    return result
+    return sorted(list(set(result)))
+
+def _inside_openclose_tag(wikitext):
+    """
+    This basically answers whether the final '<' character is to the right of
+    the final '>' character, indicating that the wikitext at the end is inside
+    a tag.
+    """
+    return wikitext.rfind('<') > wikitext.rfind('>')
 
 def _get_next_wikitext_chunk(scanner, token):
-    #token_re = re.compile(token, re.MULTILINE | re.DOTALL)
+    """
+    Return all the wikitext from the scanner's position when entering this
+    method until (and including) the token. Care is taken to ignore any matches
+    inside ref tags.
+    """
     token_re = re.compile(token)
-    num_reftag_open = 0
-    num_reftag_close = -1
-    num_template_open = 0
-    num_template_close = -1
+    num_tag_open, num_tag_close = 0, 0
+    num_template_open, num_template_close = 0, 0
     wikitext_chunk = ''
-    while num_reftag_open > num_reftag_close or \
-            num_template_open > num_template_close:
-        # If this is not the first time through the loop, the token was found
-        # inside a pair of <ref></ref> tags.
-        if num_reftag_close == -1:
-            num_reftag_close = 0
-        if num_template_close == -1:
-            num_template_close = 0
-        #sys.stderr.write(scanner.check_until(token))
+    keep_scanning = True
+
+    while keep_scanning:
+
         next_chunk = scanner.scan_to(token_re)
         scanner.scan(token_re)
         if next_chunk:
-            num_reftag_open += len(REFTAG_OPEN_RE.findall(next_chunk))
-            num_reftag_close += len(REFTAG_CLOSE_RE.findall(next_chunk))
+            num_tag_open += len(TAG_OPEN_RE.findall(next_chunk))
+            num_tag_close += len(TAG_CLOSE_RE.findall(next_chunk))
             num_template_open += len(TEMPLATE_OPEN_RE.findall(next_chunk))
             num_template_close += len(TEMPLATE_CLOSE_RE.findall(next_chunk))
             wikitext_chunk = ''.join([wikitext_chunk, next_chunk, token])
-        #sys.stderr.write(wikitext_chunk)
+
+        inside_a_tag_span = num_tag_open > num_tag_close or \
+            _inside_openclose_tag(wikitext_chunk)
+        inside_a_template_span = num_template_open > num_template_close
+        if not (inside_a_tag_span or inside_a_template_span):
+            keep_scanning = False
+
     return wikitext_chunk
 
 def get_ref_names_citations(wikitext):
@@ -125,16 +143,24 @@ def get_ref_names_citations(wikitext):
         return {}
     return {k: list(v) for k,v in result.items()}
 
+def _replace_named_refs_with_urls(wikitext, ref_urls_map):
+    soup = BeautifulSoup(wikitext)
+    result = set()
+    refs = soup.find_all('ref')
+    if refs:
+        for ref in [ref for ref in refs if 'name' in ref.attrs]:
+            name = ref.attrs['name']
+            result.update(ref_urls_map[name])
+    return result
+
 def collect_citations(sentences, wikitext):
     """
     Build a list of lists of tokens by splitting each sentence by non-alphabet
     into tokens.
     """
-    ref_names_citations = {}
-    # Parse the wikitext on a first pass:
-    # Extract all the named refs and the citations with URLs found within.
-
-    # Pass through the sentences, Find the name of the ref for each
+    # Parse the wikitext on a first pass,
+    # Extract all the named refs and the citations with URLs found within:
+    ref_names_citations = get_ref_names_citations(wikitext)
 
     sent_tokens = [re.split(r'[^a-zA-Z]+', sent) for sent in sentences]
     scanner = Scanner()
@@ -151,10 +177,11 @@ def collect_citations(sentences, wikitext):
             # Get all the text until this token is matched, but don't match
             # anything inside <ref.*></ref> tags.
             # Collect the urls in this range.
-            urls.update(extract_ref_urls_from_wikitext(_get_next_wikitext_chunk(
-                scanner, token
-            )))
-            #print token.encode('utf8')
+            next_chunk = _get_next_wikitext_chunk(scanner, token)
+            urls.update(extract_ref_urls_from_wikitext(next_chunk))
+            urls.update(
+                _replace_named_refs_with_urls(next_chunk, ref_names_citations)
+            )
         if sent_number == len(sent_tokens) - 1:
             urls.update(extract_ref_urls_from_wikitext(scanner.rest()))
         # Save a list with the sentence text followed by each of the found

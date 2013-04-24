@@ -4,10 +4,10 @@ import re
 import unittest
 import sys
 from bs4 import BeautifulSoup
-
-
 from string_scanner.scanner import Scanner
 from ddt import ddt, data
+import pprint
+pp = pprint.PrettyPrinter()
 
 sentences_Aquamole_Pot = [
     u'Aquamole Pot is a cave in West Kingsdale, North Yorkshire, England.',
@@ -167,6 +167,7 @@ class Test(unittest.TestCase):
     #     (text_Aquamole_Pot_no_url, text_Aquamole_Pot_no_url_without_ref),
     #     )
 
+    #@unittest.skip('')
     def test_remove_refs_with_no_url(self):
         self.assertEqual(
             result_Aquamole_Pot,
@@ -182,17 +183,17 @@ class Test(unittest.TestCase):
  | author = Ian Watson
  | year = 1980
  | month = April
- | title = Kingsdale master cave, Yorkshire, Jingling Avens, Late reports Wórk
+ | title = Kingsdale master cave, Yorkshire, Jingling Avens, Late reports W\u006Frk
  | journal = [[Cave Diving Group|Cave diving group newsletter]]
  | issue = New series No.59
  | pages = page 12–13
  | url = http://www.wildplaces.co.uk/descent/descent168.html
  }}</ref>
 
-Wórk"""
+W\u006Frk"""
 
         scanner.string = expect
-        token = u'Wórk'
+        token = u'W\u006Frk'
         actual = get_data._get_next_wikitext_chunk(scanner, token)
         self.assertEqual(expect, actual)
 
@@ -205,22 +206,24 @@ class TestComplicatedRefs(unittest.TestCase):
         #    'http://www.wildplaces.co.uk/descent/descent170.html'],
         expect = [
             [],
-            ['http://www.wildplaces.co.uk/descent/descent168.html',
-             'http://www.wildplaces.co.uk/descent/descent170.html'],
+            [u'http://www.wildplaces.co.uk/descent/descent168.html',
+             u'http://www.wildplaces.co.uk/descent/descent170.html'],
             [],
             [],
-            ['http://www.wildplaces.co.uk/descent/descent168.html',
-             'http://www.wildplaces.co.uk/descent/descent169.html',
-             'http://www.wildplaces.co.uk/descent/descent170.html'],
+            [u'http://www.wildplaces.co.uk/descent/descent168.html',
+             u'http://www.wildplaces.co.uk/descent/descent169.html',
+             u'http://www.wildplaces.co.uk/descent/descent170.html'],
             [],
-            ['http://www.wildplaces.co.uk/descent/descent168.html',
-             'http://www.wildplaces.co.uk/descent/descent170.html'],
+            [u'http://www.wildplaces.co.uk/descent/descent168.html',
+             u'http://www.wildplaces.co.uk/descent/descent170.html'],
             [],
         ]
-        actual = get_data.collect_citations(
+        actual = [sorted(list) for list in get_data.collect_citations(
             sentences_Aquamole_Pot,
             wikitext_Aquamole_Pot_complicated_refs,
-        )
+        )]
+        pp.pprint(expect)
+        pp.pprint(actual)
         self.assertEqual(expect, actual)
 
     def test_get_ref_names_citations(self):
@@ -239,6 +242,39 @@ class TestComplicatedRefs(unittest.TestCase):
                 sorted(expect[key]),
                 sorted(actual[key])
             )
+
+
+class TestREs(unittest.TestCase):
+
+    def test_open_tag(self):
+        self.assertTrue(get_data.TAG_OPEN_RE.search(' <ref> '))
+        self.assertTrue(get_data.TAG_OPEN_RE.search(' < ref > '))
+        self.assertTrue(get_data.TAG_OPEN_RE.search(' <ref name="hello"> '))
+        self.assertFalse(get_data.TAG_OPEN_RE.search(' </ref> '))
+        self.assertFalse(get_data.TAG_OPEN_RE.search(' <ref /> '))
+        self.assertFalse(get_data.TAG_OPEN_RE.search(' <ref name="hello"/> '))
+        self.assertFalse(get_data.TAG_CLOSE_RE.search(' <ref name="hello" /> '))
+        self.assertFalse(get_data.TAG_CLOSE_RE.search(' < ref name="hello" /> '))
+
+    def test_close_tag(self):
+        self.assertFalse(get_data.TAG_CLOSE_RE.search(' <ref> '))
+        self.assertFalse(get_data.TAG_CLOSE_RE.search(' < ref > '))
+        self.assertFalse(get_data.TAG_CLOSE_RE.search(' <ref name="hello"> '))
+        self.assertTrue(get_data.TAG_CLOSE_RE.search(' </ref> '))
+        self.assertFalse(get_data.TAG_CLOSE_RE.search(' <ref /> '))
+        self.assertFalse(get_data.TAG_CLOSE_RE.search(' <ref name="hello"/> '))
+        self.assertFalse(get_data.TAG_CLOSE_RE.search(' <ref name="hello" /> '))
+        self.assertFalse(get_data.TAG_CLOSE_RE.search(' < ref name="hello" /> '))
+
+    def test_openclose_tag(self):
+        self.assertFalse(get_data.TAG_OPENCLOSE_RE.search(' <ref> '))
+        self.assertFalse(get_data.TAG_OPENCLOSE_RE.search(' < ref > '))
+        self.assertFalse(get_data.TAG_OPENCLOSE_RE.search(' <ref name="hello"> '))
+        self.assertFalse(get_data.TAG_OPENCLOSE_RE.search(' </ref> '))
+        self.assertTrue(get_data.TAG_OPENCLOSE_RE.search(' <ref /> '))
+        self.assertTrue(get_data.TAG_OPENCLOSE_RE.search(' <ref name="hello"/> '))
+        self.assertTrue(get_data.TAG_OPENCLOSE_RE.search(' <ref name="hello" /> '))
+        self.assertTrue(get_data.TAG_OPENCLOSE_RE.search(' < ref name="hello" /> '))
 
 
 # TODO
