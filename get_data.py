@@ -6,28 +6,21 @@ import nltk  # for now.
 import re
 import sys
 from wpTextExtractor import wiki2sentences
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment
 from string_scanner.scanner import Scanner
 import mwparserfromhell
+import sanitize_html
 
 TAG_OPEN_RE = re.compile(
-    r'<[^\/].*?[^\/]>',
+    r'<(?!--)[^\/].*?[^\/]>',
     re.MULTILINE | re.DOTALL
 )
-#TAG_NAMED_OPEN_RE = re.compile(
-#    r'<ref.*?name\s*=\s*[\'\"](?P<name>\S+[\'\"]).*?[^\/]>',
-#    re.MULTILINE | re.DOTALL | re.IGNORECASE
-#)
 TAG_CLOSE_RE = re.compile(
     r'<\/.*?[^\/]>',
     re.MULTILINE | re.DOTALL
 )
-#REFTAG_NAMED_COMBINED_RE = re.compile(
-#    r'<ref.*?name\s*=\s*[\'\"](?P<name>\S+[\'\"]).*?>',
-#    re.MULTILINE | re.DOTALL | re.IGNORECASE
-#)
 TAG_OPENCLOSE_RE = re.compile(
-    r'<[^\/].*?\/>',
+    r'<[^\/].*?\/>|<!--.*?-->',
     re.MULTILINE | re.DOTALL
 )
 TEMPLATE_OPEN_RE = re.compile(
@@ -63,8 +56,15 @@ def split_sentences(wikitext):
     # Can I use splitta instead of nltk here?
     sent_detector = nltk.data.load(
             'tokenizers/punkt/%s.pickle' % 'english'
-        ).tokenize
-    return wiki2sentences(wikitext, sent_detector, True)[0]
+    ).tokenize
+    sentences = wiki2sentences(wikitext, sent_detector, True)[0]
+    result = []
+    for sent in sentences:
+        if sent.strip() == 'References':
+            break
+        result.append(sent)
+    return result
+
 
 def extract_ref_urls_from_wikitext(wikitext):
     """
@@ -104,13 +104,21 @@ def _get_next_wikitext_chunk(scanner, token):
     while keep_scanning:
 
         next_chunk = scanner.scan_to(token_re)
-        scanner.scan(token_re)
+        #print(next_chunk.encode('utf8'))  # TEMP
+        #print(token.encode('utf8'))  # TEMP
+        assert next_chunk is not None
+        assert scanner.scan(token_re) is not None
         if next_chunk:
             num_tag_open += len(TAG_OPEN_RE.findall(next_chunk))
             num_tag_close += len(TAG_CLOSE_RE.findall(next_chunk))
             num_template_open += len(TEMPLATE_OPEN_RE.findall(next_chunk))
             num_template_close += len(TEMPLATE_CLOSE_RE.findall(next_chunk))
-            wikitext_chunk = ''.join([wikitext_chunk, next_chunk, token])
+            wikitext_chunk = ' '.join([wikitext_chunk, next_chunk, token])
+        #else:
+        #    print('****')
+        #    print(next_chunk.encode('utf8'))
+        #    print('****')
+        #    sys.exit(2)
 
         inside_a_tag_span = num_tag_open > num_tag_close or \
             _inside_openclose_tag(wikitext_chunk)
@@ -133,15 +141,21 @@ def get_ref_names_citations(wikitext):
     if not refs:
         return {}
     for ref in [ref for ref in refs if 'name' in ref.attrs]:
-        name = ref.attrs['name']
+        name = unicode(ref.attrs['name'])
         urls = extract_ref_urls_from_wikitext(unicode(ref.string))
         if urls:
             new_urls = result.get(name, set())
             new_urls.update(urls)
             result[name] = new_urls
+        else:
+            result[name] = set()
     if not result.items():
         return {}
-    return {k: list(v) for k,v in result.items()}
+    result = {k: list(v) for k,v in result.items()}
+    #for k in result.keys():
+    #    print(k.encode('utf8'))
+    #sys.exit()
+    #return result
 
 def _replace_named_refs_with_urls(wikitext, ref_urls_map):
     soup = BeautifulSoup(wikitext)
@@ -149,7 +163,7 @@ def _replace_named_refs_with_urls(wikitext, ref_urls_map):
     refs = soup.find_all('ref')
     if refs:
         for ref in [ref for ref in refs if 'name' in ref.attrs]:
-            name = ref.attrs['name']
+            name = unicode(ref.attrs['name'])
             result.update(ref_urls_map[name])
     return result
 
@@ -197,7 +211,7 @@ if __name__ == '__main__':
         sys.exit(2)
     title = sys.argv[1]
 
-    # download page in wikitext format
+    # Download the page in wikitext format.
     wikicode = mwparserfromhell.parse(scrape_wikitext(title))
     for node in wikicode.nodes:
         try:
@@ -207,11 +221,24 @@ if __name__ == '__main__':
                 wikicode.remove(node)
         except AttributeError:
             pass
-    wikitext = wikicode.__unicode__()
+        if isinstance(node, mwparserfromhell.nodes.Wikilink):
+            before = unicode(node)
+            replacement_text = node.text or node.title
+            replacement_node = mwparserfromhell.nodes.Text(unicode(replacement_text))
+            after = unicode(replacement_node)
+            wikicode.replace(node, replacement_node)
+            #print("before: {}".format(before).encode('utf8'))  # TEMP
+            #print("after: {}".format(after).encode('utf8'))  # TEMP
+
+    wikitext = sanitize_html.safe_html(unicode(wikicode))
+    #print(wikitext.encode('utf8'))  # TEMP
 
     # Render as plain text without tags and templates
     # Split into sentences, Save the sentences.
     sentences = split_sentences(wikitext)
+
+    #print('\n'.join(sentences).encode('utf8'))  # TEMP
+    #sys.exit()
 
     # For each sentence-level list, scan the original wikitext for each token,
     # collecting the citations that have URLs, saving the URLs and the sentence

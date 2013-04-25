@@ -111,6 +111,16 @@ wikitext_Aquamole_Pot_complicated_refs = u"""{{Infobox cave
  | issue = New series No.32
  | pages = page 16–18
  }}</ref>
+<ref name="ref 1">{{cite journal
+ | author = no url
+ | year = 1974
+ | month = July
+ | title = Kingsdale master cave, Yorkshire
+ | journal = [[Cave Diving Group|Cave diving group newsletter]]
+ | issue = New series No.32
+ | pages = page 16–18
+ }}</ref>
+
 
 ==History==
 
@@ -230,6 +240,7 @@ class TestComplicatedRefs(unittest.TestCase):
         expect = {
             'ref 0': [u'http://www.wildplaces.co.uk/descent/descent168.html',
                       u'http://www.wildplaces.co.uk/descent/descent170.html'],
+            'ref 1': [],
         }
         actual = get_data.get_ref_names_citations(
             wikitext_Aquamole_Pot_complicated_refs
@@ -247,34 +258,34 @@ class TestComplicatedRefs(unittest.TestCase):
 class TestREs(unittest.TestCase):
 
     def test_open_tag(self):
-        self.assertTrue(get_data.TAG_OPEN_RE.search(' <ref> '))
-        self.assertTrue(get_data.TAG_OPEN_RE.search(' < ref > '))
-        self.assertTrue(get_data.TAG_OPEN_RE.search(' <ref name="hello"> '))
-        self.assertFalse(get_data.TAG_OPEN_RE.search(' </ref> '))
-        self.assertFalse(get_data.TAG_OPEN_RE.search(' <ref /> '))
-        self.assertFalse(get_data.TAG_OPEN_RE.search(' <ref name="hello"/> '))
-        self.assertFalse(get_data.TAG_CLOSE_RE.search(' <ref name="hello" /> '))
-        self.assertFalse(get_data.TAG_CLOSE_RE.search(' < ref name="hello" /> '))
+        self.assertTrue(get_data.TAG_OPEN_RE.search(u' <ref> '))
+        self.assertTrue(get_data.TAG_OPEN_RE.search(u' < ref > '))
+        self.assertTrue(get_data.TAG_OPEN_RE.search(u' <ref name="hello"> '))
+        self.assertFalse(get_data.TAG_OPEN_RE.search(u' </ref> '))
+        self.assertFalse(get_data.TAG_OPEN_RE.search(u' <ref /> '))
+        self.assertFalse(get_data.TAG_OPEN_RE.search(u' <ref name="hello"/> '))
+        self.assertFalse(get_data.TAG_CLOSE_RE.search(u' <ref name="hello" /> '))
+        self.assertFalse(get_data.TAG_CLOSE_RE.search(u' < ref name="hello" /> '))
 
     def test_close_tag(self):
-        self.assertFalse(get_data.TAG_CLOSE_RE.search(' <ref> '))
-        self.assertFalse(get_data.TAG_CLOSE_RE.search(' < ref > '))
-        self.assertFalse(get_data.TAG_CLOSE_RE.search(' <ref name="hello"> '))
-        self.assertTrue(get_data.TAG_CLOSE_RE.search(' </ref> '))
-        self.assertFalse(get_data.TAG_CLOSE_RE.search(' <ref /> '))
-        self.assertFalse(get_data.TAG_CLOSE_RE.search(' <ref name="hello"/> '))
-        self.assertFalse(get_data.TAG_CLOSE_RE.search(' <ref name="hello" /> '))
-        self.assertFalse(get_data.TAG_CLOSE_RE.search(' < ref name="hello" /> '))
+        self.assertFalse(get_data.TAG_CLOSE_RE.search(u' <ref> '))
+        self.assertFalse(get_data.TAG_CLOSE_RE.search(u' < ref > '))
+        self.assertFalse(get_data.TAG_CLOSE_RE.search(u' <ref name="hello"> '))
+        self.assertTrue(get_data.TAG_CLOSE_RE.search(u' </ref> '))
+        self.assertFalse(get_data.TAG_CLOSE_RE.search(u' <ref /> '))
+        self.assertFalse(get_data.TAG_CLOSE_RE.search(u' <ref name="hello"/> '))
+        self.assertFalse(get_data.TAG_CLOSE_RE.search(u' <ref name="hello" /> '))
+        self.assertFalse(get_data.TAG_CLOSE_RE.search(u' < ref name="hello" /> '))
 
     def test_openclose_tag(self):
-        self.assertFalse(get_data.TAG_OPENCLOSE_RE.search(' <ref> '))
-        self.assertFalse(get_data.TAG_OPENCLOSE_RE.search(' < ref > '))
-        self.assertFalse(get_data.TAG_OPENCLOSE_RE.search(' <ref name="hello"> '))
-        self.assertFalse(get_data.TAG_OPENCLOSE_RE.search(' </ref> '))
-        self.assertTrue(get_data.TAG_OPENCLOSE_RE.search(' <ref /> '))
-        self.assertTrue(get_data.TAG_OPENCLOSE_RE.search(' <ref name="hello"/> '))
-        self.assertTrue(get_data.TAG_OPENCLOSE_RE.search(' <ref name="hello" /> '))
-        self.assertTrue(get_data.TAG_OPENCLOSE_RE.search(' < ref name="hello" /> '))
+        self.assertFalse(get_data.TAG_OPENCLOSE_RE.search(u' <ref> '))
+        self.assertFalse(get_data.TAG_OPENCLOSE_RE.search(u' < ref > '))
+        self.assertFalse(get_data.TAG_OPENCLOSE_RE.search(u' <ref name="hello"> '))
+        self.assertFalse(get_data.TAG_OPENCLOSE_RE.search(u' </ref> '))
+        self.assertTrue(get_data.TAG_OPENCLOSE_RE.search(u' <ref /> '))
+        self.assertTrue(get_data.TAG_OPENCLOSE_RE.search(u' <ref name="hello"/> '))
+        self.assertTrue(get_data.TAG_OPENCLOSE_RE.search(u' <ref name="hello" /> '))
+        self.assertTrue(get_data.TAG_OPENCLOSE_RE.search(u' < ref name="hello" /> '))
 
 
 # TODO
