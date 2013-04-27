@@ -187,6 +187,7 @@ def prune_lines(sentences_and_refurls):
     Ignore blank lines
     Ignore everything beginning with the References section header.
     Ignore all other section header lines
+    Ignore sentences with fewer than 2 tokens
     """
     result = []
     for item in sentences_and_refurls:
@@ -203,6 +204,10 @@ def prune_lines(sentences_and_refurls):
 
         # Ignore all other section header lines
         if sent[0] == '=' and sent[-1] == '=':
+            continue
+
+        # Ignore all other section header lines
+        if len(sent.split()) < 2:
             continue
 
         result.append(item)
