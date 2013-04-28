@@ -288,6 +288,22 @@ class TestComplicatedRefs(unittest.TestCase):
         )]
         self.assertEqual(expect, actual)
 
+
+class TestFixupWikitext(unittest.TestCase):
+
+    def test(self):
+        bad_wikitext = u"""America."<ref name=páth/>
+
+The dossier"""
+
+        expect = u"""America."<ref name="páth" />
+
+The dossier"""
+
+        actual = get_data.fixup_named_refs(bad_wikitext)
+        self.assertEqual(expect, actual)
+
+
 # TODO
 # : multiple {{cite }} templates in a single ref
 # : add {{cite}} in another named ref.

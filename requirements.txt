@@ -5,3 +5,4 @@ nltk
 https://github.com/callison-burch/wpTextExtractor/zipball/master
 https://github.com/callison-burch/wikipydia/zipball/master
 /Users/orluke/src/mwparserfromhell
+mwclient

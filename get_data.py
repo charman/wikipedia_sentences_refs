@@ -2,6 +2,7 @@
 # -*- encoding: utf-8 -*-
 import wiki2plain
 import lxml.etree
+import json
 import urllib
 import nltk  # for now.
 import re
@@ -37,6 +38,21 @@ def scrape_wikitext(title):
     # Remove everything starting with the '<references\s*/>' tag.
     return unicode(re.split(r'<references\s*/>', wikitext)[0])
 
+API_URL = "http://en.wikipedia.org/w/api.php"
+
+def scrape_wikitext2(title):
+    raw = urllib.urlopen(API_URL, title).read()
+    res = json.loads(raw)
+    return res["query"]["pages"].values()[0]["revisions"][0]["*"]
+
+def scrape_wikitext3(title):
+    import mwclient
+    site = mwclient.Site('en.wikipedia.org')
+    page = site.Pages[title]
+    #return page.get_expanded()
+    revs = page.revisions(prop='content', limit=1, expandtemplates=False)
+    return revs.next()['*']
+
 def split_sentences(text):
     """
     Return a list of sentences split using splitta. The only whitespace should
@@ -60,8 +76,16 @@ def split_sentences(text):
 
     return result
 
-def collect_refs(wikitext):
+def fixup_named_refs(wikitext):
+    """
+    Replace named ref tags with bad syntax like <ref name=something/> with
+    better syntax, like <ref name="something" />.
+    """
+    named_openclose_reftag_re = re.compile(r'<\s*ref\s*name\s*=\s*([^\s]+)/>')
+    repl = r'<ref name="\1" />'
+    return named_openclose_reftag_re.sub(repl, wikitext)
 
+def collect_refs(wikitext):
     reftokens_count = 0
     map_refnames_to_reftokens = {}
     map_reftoken_to_urls = {}
@@ -97,10 +121,13 @@ def collect_refs(wikitext):
         prev_urls.update(urls)
         map_reftoken_to_urls[reftoken] = prev_urls
 
+        #print(('\n--------' + unicode(ref)).encode('utf8'))  # TEMP
         ref.replace_with(' %s ' % reftoken)
 
+    #sys.exit()  # TEMP
     map_reftoken_to_urls = {k: list(v) for k, v in map_reftoken_to_urls.items()}
     return map_reftoken_to_urls, unicode(soup.get_text())
+
 
 
 def extract_ref_urls_from_wikitext(wikitext):
@@ -146,7 +173,8 @@ def urls_for_lines(sentences, map_reftoken_to_urls, plain_text_with_reftokens):
         tokens = sent_tokens[sent_number][1:]
 
         if sent_number < len(sent_tokens) - 1:
-            # The first word of the next sentence:
+            # The first word of the next sentence (if the next sentence is not
+            # empty):
             try:
               tokens.append(sent_tokens[sent_number + 1][0])
             except IndexError:
@@ -158,11 +186,20 @@ def urls_for_lines(sentences, map_reftoken_to_urls, plain_text_with_reftokens):
             # Get all the text until this token is matched, but don't match
             # anything inside <ref.*></ref> tags.
             # Collect the urls in this range.
+
+            if scanner.check_to(token_re) is None:
+                sys.exit(
+                    '\nEverything after "{}" is:\n{}'.format(
+                        token_re.pattern,
+                        scanner.rest()
+                    )
+                )
+
             next_chunk = scanner.scan_to(token_re)
-            assert next_chunk is not None
 
             # Move the scanner ahead, and make an assertion.
-            assert scanner.scan(token_re) is not None
+            #assert scanner.scan(token_re) is not None
+            scanner.scan(token_re)
 
             if sent_number == len(sent_tokens) - 1:
                 if token_idx == len(sent_tokens[sent_number]) - 1:
@@ -198,7 +235,7 @@ def prune_lines(sentences_and_refurls):
         if sent == '':
             continue
 
-        # Ignore everything beginning with the References section header.
+        # Ignore everything beginning with the References or Notes section header.
         if sent.strip('=') == 'References':
             break
 
@@ -225,15 +262,19 @@ if __name__ == '__main__':
     title = sys.argv[1]
 
     # Download the page in wikitext format.
-    wikitext = scrape_wikitext(title)
-
+    wikitext = scrape_wikitext3(title)
     # Since the result will be tab-separated text, remove all tabs from the
     # source.
-    wikitext.replace('\t', ' ')
+    wikitext = wikitext.replace('\t', ' ')
+    wikitext = wikitext.replace('&nbsp;', ' ')
+    wikitext = fixup_named_refs(wikitext)
     wikitext = sanitize_html.safe_html(wikitext)
+    wikitext = '\n'.join(line.strip() for line in wikitext.split('\n') if line.strip())
 
     # Render a text-only representation of the page and sentence-split it.
     sentences = split_sentences(strip_wikitext_markup(wikitext))
+    #print(wikitext.encode('utf8')) #TEMP
+    #sys.exit() #TEMP
 
     # Scan through the wikitext, collecting a map of (named and unnamed) refs
     # to urls, while also replacing each ref span with a token like
