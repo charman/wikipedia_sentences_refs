@@ -45,12 +45,12 @@ def scrape_wikitext2(title):
     res = json.loads(raw)
     return res["query"]["pages"].values()[0]["revisions"][0]["*"]
 
-def scrape_wikitext3(title):
+def scrape_wikitext3(title, expandtemplates=False):
     import mwclient
     site = mwclient.Site('en.wikipedia.org')
     page = site.Pages[title]
     #return page.get_expanded()
-    revs = page.revisions(prop='content', limit=1, expandtemplates=False)
+    revs = page.revisions(prop='content', limit=1, expandtemplates=expandtemplates)
     return revs.next()['*']
 
 def split_sentences(text):
@@ -86,6 +86,17 @@ def fixup_named_refs(wikitext):
     return named_openclose_reftag_re.sub(repl, wikitext)
 
 def collect_refs(wikitext):
+    """
+    Finds all the citations within named and unnamed <ref></ref> and <ref />
+    tags, returns a copy of the wikitext with the reftag spans replaced with
+    identifier tokens of the form 'coerefN' (without quotes, N is a decimal
+    number).
+
+    Also returns a dict that is a mapping of ref indentifier tokens as
+    keys and a list of associated URLs as the values.
+
+    The return value is a tuple containing the dict followed by the wikitext.
+    """
     reftokens_count = 0
     map_refnames_to_reftokens = {}
     map_reftoken_to_urls = {}
@@ -129,7 +140,6 @@ def collect_refs(wikitext):
     return map_reftoken_to_urls, unicode(soup.get_text())
 
 
-
 def extract_ref_urls_from_wikitext(wikitext):
     """
     Parse the wikitext and get all the urls found in cite/Citation templates.
@@ -142,7 +152,12 @@ def extract_ref_urls_from_wikitext(wikitext):
     result = []
     for ut in url_templates:
         if ut.has_param('url'):
-            result.append(ut.get('url').split('=')[-1].strip())
+            #print(ut.get('url'))
+            matched_url = re.match(r'\s*url\s*=\s*(\S+)\s*', unicode(ut.get('url')))
+            if matched_url:
+                url = matched_url.groups(1)[0]
+                #result.append(ut.get('url').split('=')[-1].strip())
+                result.append(url)
     return list(set(result))
 
 def urls_for_lines(sentences, map_reftoken_to_urls, plain_text_with_reftokens):
@@ -262,7 +277,7 @@ if __name__ == '__main__':
     title = sys.argv[1]
 
     # Download the page in wikitext format.
-    wikitext = scrape_wikitext3(title)
+    wikitext = scrape_wikitext(title)
     # Since the result will be tab-separated text, remove all tabs from the
     # source.
     wikitext = wikitext.replace('\t', ' ')

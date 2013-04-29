@@ -304,6 +304,19 @@ The dossier"""
         self.assertEqual(expect, actual)
 
 
+class TestUrlExtraction(unittest.TestCase):
+
+    def test_cited_urls_containing_equal_sign(self):
+        wikitext = u'chanting the [[Litany of the Saints]].<ref name="YouTube procession">{{cite AV media | title = Procession and entrance in Conclave | trans_title = | medium = Television production | language = Italian | url = https://www.youtube.com/watch?v=cTtzyr5sBkc | accessdate = 9 April 2013 | date = 12 March 2013 | publisher = Centro Televisivo Vaticano | location = Rome | quote =}}</ref> After taking their places,'
+        expect = [u'https://www.youtube.com/watch?v=cTtzyr5sBkc']
+        actual = get_data.extract_ref_urls_from_wikitext(wikitext)
+        self.assertEqual(expect, actual)
+
+
+if __name__ == '__main__':
+    unittest.main()
+
+
 # TODO
 # : multiple {{cite }} templates in a single ref
 # : add {{cite}} in another named ref.
