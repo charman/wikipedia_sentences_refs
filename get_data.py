@@ -23,9 +23,11 @@ def scrape_wikitext(title):
         "format":"xml",
         "action":"query",
         "prop":"revisions",
-        "rvprop":"timestamp|user|comment|content"
+        "rvprop":"content",
+        "rvlimit":"1",
+        "redirects":"",
     }
-    params["titles"] = "API|%s" % urllib.quote(title.encode("utf8"))
+    params["titles"] = "%s" % title
     qs = "&".join("%s=%s" % (k, v)  for k, v in params.items())
     url = "http://en.wikipedia.org/w/api.php?%s" % qs
     try:
@@ -274,6 +276,7 @@ if __name__ == '__main__':
     if len(sys.argv) != 2:
         print('usage: %s wikipedia_page_title' % sys.argv[0])
         sys.exit(2)
+    #title = sys.argv[1].decode('utf8')
     title = sys.argv[1]
 
     # Download the page in wikitext format.
