@@ -49,6 +49,7 @@ expanded to `130 feet (40&nbsp;m)`.
 
 ## TODO
 
+- Support other language pages.
 - Convert html entities to unicode:
   [http://stackoverflow.com/questions/701704/convert-html-entities-to-unicode-and-vice-versa
   ](http://stackoverflow.com/questions/701704/convert-html-entities-to-unicode-and-vice-versa)
@@ -57,7 +58,6 @@ expanded to `130 feet (40&nbsp;m)`.
   of a `{{cite ... }}` or `{{Citation ... }}` template.
 - Fork the GitHub string_scanner repository. Then make it an installable
   package so that it can be installed with pip.
-- Support other language pages.
 
 
 ## Notes
@@ -65,7 +65,7 @@ expanded to `130 feet (40&nbsp;m)`.
 - The `strip_code` method in the `mwparserfromhell` package is not implemented.
   More info: [https://github.com/earwig/mwparserfromhell/issues/9
   ](https://github.com/earwig/mwparserfromhell/issues/9)
-- To expand templates, add the `&rvexpandtemplates=` option to the API call.
+- To expand templates, add the `&rvexpandtemplates=` parameter to the API call.
 - On citations:
   - [Mediawiki documentation](https://www.mediawiki.org/wiki/Extension:Cite/Cite.php)
     - Text between `<ref></ref>` tags doesn't get rendered in line (or anywhere)
