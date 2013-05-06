@@ -40,21 +40,6 @@ def scrape_wikitext(title):
     # Remove everything starting with the '<references\s*/>' tag.
     return unicode(re.split(r'<references\s*/>', wikitext)[0])
 
-API_URL = "http://en.wikipedia.org/w/api.php"
-
-def scrape_wikitext2(title):
-    raw = urllib.urlopen(API_URL, title).read()
-    res = json.loads(raw)
-    return res["query"]["pages"].values()[0]["revisions"][0]["*"]
-
-def scrape_wikitext3(title, expandtemplates=False):
-    import mwclient
-    site = mwclient.Site('en.wikipedia.org')
-    page = site.Pages[title]
-    #return page.get_expanded()
-    revs = page.revisions(prop='content', limit=1, expandtemplates=expandtemplates)
-    return revs.next()['*']
-
 def split_sentences(text):
     """
     Return a list of sentences split using splitta. The only whitespace should
