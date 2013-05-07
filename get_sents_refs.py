@@ -1,24 +1,45 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
-import wiki2plain
-import lxml.etree
+import argparse
 import json
-import urllib
-import nltk  # for now.
 import re
 import sys
+import urllib
+import wiki2plain
+import lxml.etree
+import nltk  # for now.
 from bs4 import BeautifulSoup
 from string_scanner.scanner import Scanner
 import mwparserfromhell
 import sanitize_html
 
 
+ENGLISH_LANG = 'en'
+
 REFTOKEN_RE = re.compile(
     'coeref\d+',
     re.MULTILINE | re.DOTALL
 )
 
-def scrape_wikitext(title):
+def _handle_args(argv):
+    """
+    Use argparse module to handle command line arguments
+    """
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-l', '--language',
+        default=ENGLISH_LANG,
+        help='the language of the Wikipedia site.\n'
+             'Choices include en, es, etc.'
+    )
+    parser.add_argument(
+        'title',
+        help='the title of the Wikipedia page to be processed'
+    )
+    return parser.parse_args(argv[1:])
+
+def scrape_wikitext(title, lang=ENGLISH_LANG):
     params = {
         "format":"xml",
         "action":"query",
@@ -27,18 +48,51 @@ def scrape_wikitext(title):
         "rvlimit":"1",
         "redirects":"",
     }
-    params["titles"] = "%s" % title
+    params["titles"] = "%s" % urllib.quote(title.encode('utf8'))
     qs = "&".join("%s=%s" % (k, v)  for k, v in params.items())
-    url = "http://en.wikipedia.org/w/api.php?%s" % qs
+    url = "http://%s.wikipedia.org/w/api.php?%s" % (lang, qs)
     try:
         tree = lxml.etree.parse(urllib.urlopen(url))
     except:
-        sys.exit("ERROR: the %s page could not be loaded." % title)
+        sys.exit(
+            "0ERROR: the '%s' page could not be loaded in the language '%s'." %
+            (title, lang)
+        )
     revs = tree.xpath('//rev')
+    if not revs:
+        sys.exit(
+            "1ERROR: the '%s' page could not be loaded in the language '%s'." %
+            (title, lang)
+        )
     wikitext = revs[-1].text.replace('\t', ' ')
 
     # Remove everything starting with the '<references\s*/>' tag.
     return unicode(re.split(r'<references\s*/>', wikitext)[0])
+
+def translated_title(english_title, lang):
+    """
+    Returns the name of the page that is a translation into the specified lang,
+    of the english_title page.
+    """
+    url = (
+        'http://en.wikipedia.org/w/api.php?'
+        'format=xml&'
+        'action=query&'
+        'titles=%s&'
+        'prop=langlinks&'
+        'lllimit=500'
+        % english_title
+    )
+    lang_links = urllib.urlopen(url).read()
+    soup = BeautifulSoup(lang_links)
+    try:
+        return soup.find('ll', lang=lang).text
+    except AttributeError:
+        error_msg = (
+            "ERROR: the '%s' page does not exist in the language '%s'." %
+            (english_title, lang)
+        )
+        sys.exit(error_msg)
 
 def split_sentences(text):
     """
@@ -119,10 +173,8 @@ def collect_refs(wikitext):
         prev_urls.update(urls)
         map_reftoken_to_urls[reftoken] = prev_urls
 
-        #print(('\n--------' + unicode(ref)).encode('utf8'))  # TEMP
         ref.replace_with(' %s ' % reftoken)
 
-    #sys.exit()  # TEMP
     map_reftoken_to_urls = {k: list(v) for k, v in map_reftoken_to_urls.items()}
     return map_reftoken_to_urls, unicode(soup.get_text())
 
@@ -139,7 +191,6 @@ def extract_ref_urls_from_wikitext(wikitext):
     result = []
     for ut in url_templates:
         if ut.has_param('url'):
-            #print(ut.get('url'))
             matched_url = re.match(r'\s*url\s*=\s*(\S+)\s*', unicode(ut.get('url')))
             if matched_url:
                 url = matched_url.groups(1)[0]
@@ -256,16 +307,16 @@ def prune_lines(sentences_and_refurls):
 def strip_wikitext_markup(wikitext):
     return unicode(wiki2plain.Wiki2Plain(wikitext).text)
 
-if __name__ == '__main__':
-
-    if len(sys.argv) != 2:
-        print('usage: %s wikipedia_page_title' % sys.argv[0])
-        sys.exit(2)
-    #title = sys.argv[1].decode('utf8')
-    title = sys.argv[1]
+def main(argv):
+    args = _handle_args(argv)
+    language = args.language
+    title = args.title if language == ENGLISH_LANG else translated_title(
+        args.title,
+        language
+    )
 
     # Download the page in wikitext format.
-    wikitext = scrape_wikitext(title)
+    wikitext = scrape_wikitext(title, language)
     # Since the result will be tab-separated text, remove all tabs from the
     # source.
     wikitext = wikitext.replace('\t', ' ')
@@ -276,8 +327,6 @@ if __name__ == '__main__':
 
     # Render a text-only representation of the page and sentence-split it.
     sentences = split_sentences(strip_wikitext_markup(wikitext))
-    #print(wikitext.encode('utf8')) #TEMP
-    #sys.exit() #TEMP
 
     # Scan through the wikitext, collecting a map of (named and unnamed) refs
     # to urls, while also replacing each ref span with a token like
@@ -302,4 +351,7 @@ if __name__ == '__main__':
     result_string = '\n'.join(
         '\t'.join(result) for result in sentences_and_refurls
     )
-    print(result_string.encode('utf8'))
+    return result_string
+
+if __name__ == '__main__':
+    print(main(sys.argv).encode('utf8'))
