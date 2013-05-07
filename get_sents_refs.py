@@ -81,7 +81,7 @@ def translated_title(english_title, lang):
         'titles=%s&'
         'prop=langlinks&'
         'lllimit=500'
-        % english_title
+        % urllib.quote(english_title.encode('utf8'))
     )
     lang_links = urllib.urlopen(url).read()
     soup = BeautifulSoup(lang_links)
@@ -310,10 +310,13 @@ def strip_wikitext_markup(wikitext):
 def main(argv):
     args = _handle_args(argv)
     language = args.language
-    title = args.title if language == ENGLISH_LANG else translated_title(
-        args.title,
-        language
-    )
+    if language == ENGLISH_LANG:
+        title = unicode(args.title, encoding='utf8')
+    else:
+        title = translated_title(
+            unicode(args.title, encoding='utf8'),
+            language
+        )
 
     # Download the page in wikitext format.
     wikitext = scrape_wikitext(title, language)
