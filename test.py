@@ -493,10 +493,36 @@ class TestSpanish(unittest.TestCase):
         expect = 'Nube'
         self.assertEqual(expect, actual)
 
+    def test_title_for_chavez_es(self):
+        """If the language option is not specified, it should be english"""
+        english_title = u'Death_and_state_funeral_of_Hugo_Ch\xe1vez'
+        lang = 'es'
+        actual = get_sents_refs.translated_title(english_title, lang)
+        expect = u'Muerte y funeral de Estado de Hugo Ch\xe1vez'
+        self.assertEqual(expect, actual)
+
     def test_de_2004_Madrid_train_bombings(self):
         cli_argv = ['get_sents_refs.py', '-l', 'de', '2004_Madrid_train_bombings']
         actual = len(get_sents_refs.main(cli_argv).split('\n'))
         self.assertTrue(actual > 0)
+
+    def test_quoted_arg_en(self):
+        cli_argv = ['get_sents_refs.py', '--quoted', 'Death_and_state_funeral_of_Hugo_Ch%C3%A1vez']
+        actual = len(get_sents_refs.main(cli_argv).split('\n'))
+        self.assertTrue(actual > 0)
+
+    def test_quoted_arg_es(self):
+        cli_argv = ['get_sents_refs.py', '--quoted', '-l', 'es', 'Death_and_state_funeral_of_Hugo_Ch%C3%A1vez']
+        actual = len(get_sents_refs.main(cli_argv).split('\n'))
+        self.assertTrue(actual > 0)
+
+    def test_quoted_arg_exception(self):
+        """
+        Incorrectly omitting the --quoted option will cause an exception on
+        pages like this.
+        """
+        cli_argv = ['get_sents_refs.py', '-l', 'es', 'Death_and_state_funeral_of_Hugo_Ch%C3%A1vez']
+        self.assertRaises(SystemExit, get_sents_refs.main, cli_argv)
 
 
 if __name__ == '__main__':

@@ -4,7 +4,7 @@ information from Wikipedia. The following tools are included:
 - `get_sents_refs.py`: Extract sentences and any URLs referenced in a citation for
   each sentence
 
-# `get_sents_refs.py`
+# The `get_sents_refs.py` script
 
 Extract sentences and any URLs referenced in a citation for each sentence in a
 Wikipedia page.
@@ -16,8 +16,21 @@ version of the
 Usage:
 
 ```bash
-./get_sents_refs.py PAGE_TITLE
+usage: get_sents_refs.py [-h] [-l LANGUAGE] [--quoted] english_title
+
+positional arguments:
+  title                 the title of the page on the English Wikipedia site to
+                        be processed
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -l LANGUAGE, --language LANGUAGE
+                        the language of the Wikipedia site. Choices include
+                        en, es, etc.
+  --quoted              the title of the Wikipedia page already has special
+                        characters replaced with the %xx escape
 ```
+
 
 ## Requirements
 
@@ -49,7 +62,6 @@ expanded to `130 feet (40&nbsp;m)`.
 
 ## TODO
 
-- Support other language pages.
 - Convert html entities to unicode:
   [http://stackoverflow.com/questions/701704/convert-html-entities-to-unicode-and-vice-versa
   ](http://stackoverflow.com/questions/701704/convert-html-entities-to-unicode-and-vice-versa)

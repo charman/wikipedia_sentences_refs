@@ -37,6 +37,12 @@ def _handle_args(argv):
         'title',
         help='the title of the Wikipedia page to be processed'
     )
+    parser.add_argument(
+        '--quoted',
+        action='store_true',
+        help='the title of the Wikipedia page already has special characters '
+             'replaced with the %%xx escape'
+    )
     return parser.parse_args(argv[1:])
 
 def scrape_wikitext(title, lang=ENGLISH_LANG):
@@ -310,13 +316,13 @@ def strip_wikitext_markup(wikitext):
 def main(argv):
     args = _handle_args(argv)
     language = args.language
-    if language == ENGLISH_LANG:
-        title = unicode(args.title, encoding='utf8')
+    if args.quoted:
+        title = urllib.unquote(args.title)
     else:
-        title = translated_title(
-            unicode(args.title, encoding='utf8'),
-            language
-        )
+        title = args.title
+    title = unicode(title, encoding='utf8')
+    if language != ENGLISH_LANG:
+       title = translated_title(title, language)
 
     # Download the page in wikitext format.
     wikitext = scrape_wikitext(title, language)
