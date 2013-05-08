@@ -9,17 +9,22 @@ information from Wikipedia. The following tools are included:
 Extract sentences and any URLs referenced in a citation for each sentence in a
 Wikipedia page.
 
-This script is called from the command line with a Wikipedia page title passed as an argument
-The wikitext is then parsed and mined for sentences.  prints to `stdout` a plain text
+This script is called from the command line with a Wikipedia page title passed
+as an argument. Note that the `-l` option allows the user to specify a foreign
+language version of the page, but the English title must still be specified.
 
-version of the
+The wikitext returned by the Wikipedia API is then parsed and mined for
+sentences. The result is printed out to `stdout` in plain text, with one
+sentence per line, and any found reference urls for that line appended and
+separated by tab characters.
+
 Usage:
 
 ```bash
 usage: get_sents_refs.py [-h] [-l LANGUAGE] [--quoted] english_title
 
 positional arguments:
-  title                 the title of the page on the English Wikipedia site to
+  english_title         the title of the page on the English Wikipedia site to
                         be processed
 
 optional arguments:

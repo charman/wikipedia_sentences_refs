@@ -34,8 +34,9 @@ def _handle_args(argv):
              'Choices include en, es, etc.'
     )
     parser.add_argument(
-        'title',
-        help='the title of the Wikipedia page to be processed'
+        'english_title',
+        help='the title of the page on the English Wikipedia site to be '
+             'processed'
     )
     parser.add_argument(
         '--quoted',
@@ -316,13 +317,19 @@ def strip_wikitext_markup(wikitext):
 def main(argv):
     args = _handle_args(argv)
     language = args.language
+
+    # Make sure this is the non-url-quoted title string.
     if args.quoted:
-        title = urllib.unquote(args.title)
+        english_title = urllib.unquote(args.english_title)
     else:
-        title = args.title
-    title = unicode(title, encoding='utf8')
-    if language != ENGLISH_LANG:
-       title = translated_title(title, language)
+        english_title = args.english_title
+    english_title = unicode(english_title, encoding='utf8')
+
+    # Get the translated title if necessary.
+    if language == ENGLISH_LANG:
+        title = english_title
+    else:
+        title = translated_title(english_title, language)
 
     # Download the page in wikitext format.
     wikitext = scrape_wikitext(title, language)
@@ -350,6 +357,7 @@ def main(argv):
         strip_wikitext_markup(wikitext_with_reftokens)
     )
 
+    # Discard lines that are not interesting.
     sentences_and_refurls = prune_lines(
         [sentence] + urls
         for sentence, urls in zip(sentences, line_urls)
