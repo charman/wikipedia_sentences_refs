@@ -36,6 +36,32 @@ optional arguments:
                         characters replaced with the %xx escape
 ```
 
+Here is an example file that could be used to run the Wikipedia extraction on a
+number of pages:
+```bash
+#!/bin/bash
+set -x
+
+TOOLSDIR=/path/to/predicate-argument-linking-data-gatherer
+OUTDIR=/path/to/results
+
+pages=( \
+  'Papal_conclave,_2013'
+  Torre_Ejecutiva_Pemex_explosion \
+  Death_and_state_funeral_of_Hugo_Ch%C3%A1vez \
+  2004_Madrid_train_bombings \
+  2010_Catalan_autonomy_protest \
+  Bolivian_gas_conflict \
+  Cochabamba_protests_of_2000 \
+  2007_Peru_earthquake \
+  Cellulose_plant_conflict_between_Argentina_and_Uruguay \
+  2006_student_protests_in_Chile \
+)
+for p in "${pages[@]}"; do
+  $TOOLSDIR/get_sents_refs.py --quoted "${p}" -l en > $OUTDIR/"${p}"-en.txt
+  $TOOLSDIR/get_sents_refs.py --quoted "${p}" -l es > $OUTDIR/"${p}"-es.txt
+done
+```
 
 ## Requirements
 
