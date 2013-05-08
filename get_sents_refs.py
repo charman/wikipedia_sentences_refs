@@ -270,9 +270,11 @@ def urls_for_lines(sentences, map_reftoken_to_urls, plain_text_with_reftokens):
 
             if scanner.check_to(token_re) is None:
                 sys.exit(
-                    '\nEverything after "{}" is:\n{}'.format(
+                    '\nERROR: can\'t find token "{}". Everything after "{}" '
+                    'is:\n{}'.format(
                         token_re.pattern,
-                        scanner.rest()
+                        token_re.pattern,
+                        scanner.rest().encode('utf8')
                     )
                 )
 
@@ -333,6 +335,11 @@ def prune_lines(sentences_and_refurls):
     return result
 
 def strip_wikitext_markup(wikitext):
+    soup = BeautifulSoup(wikitext)
+    refs = soup.find_all('ref')
+    for ref in refs:
+        ref.replace_with(' ')
+    wikitext = unicode(soup.get_text())
     return unicode(wiki2plain.Wiki2Plain(wikitext).text)
 
 def main(argv):

@@ -501,6 +501,18 @@ class TestSpanish(unittest.TestCase):
         expect = u'Muerte y funeral de Estado de Hugo Ch\xe1vez'
         self.assertEqual(expect, actual)
 
+    def test_es_peru(self):
+        cli_argv = ['get_sents_refs.py', '--quoted', '-l', 'es', '2007_Peru_earthquake']
+        actual = len(get_sents_refs.main(cli_argv).split('\n'))
+        self.assertTrue(actual > 0)
+
+    def test_title_change_peru_es(self):
+        english_title = u'2007_Peru_earthquake'
+        lang = 'es'
+        actual = get_sents_refs.translated_title(english_title, lang)
+        expect = u'Terremoto del Per\xfa de 2007'
+        self.assertEqual(expect, actual)
+
     def test_de_2004_Madrid_train_bombings(self):
         cli_argv = ['get_sents_refs.py', '-l', 'de', '2004_Madrid_train_bombings']
         actual = len(get_sents_refs.main(cli_argv).split('\n'))
