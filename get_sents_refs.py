@@ -76,6 +76,27 @@ def scrape_wikitext(title, lang=ENGLISH_LANG):
     # Remove everything starting with the '<references\s*/>' tag.
     return unicode(re.split(r'<references\s*/>', wikitext)[0])
 
+def redirected_title(english_title):
+    """
+    Returns the title of the page where this title redirects to. If there is no
+    redirection, return the same title.
+    """
+    url = (
+        'http://en.wikipedia.org/w/api.php?'
+        'format=xml&'
+        'action=query&'
+        'titles=%s&'
+        'redirects'
+        % urllib.quote(english_title.encode('utf8'))
+    )
+    response = urllib.urlopen(url).read()
+    soup = BeautifulSoup(response)
+    redirection = soup.find('r')
+    if redirection:
+        return redirection['to']
+    else:
+        return english_title
+
 def translated_title(english_title, lang):
     """
     Returns the name of the page that is a translation into the specified lang,
@@ -324,6 +345,9 @@ def main(argv):
     else:
         english_title = args.english_title
     english_title = unicode(english_title, encoding='utf8')
+
+    # Get the redirected title if necessary.
+    english_title = redirected_title(english_title)
 
     # Get the translated title if necessary.
     if language == ENGLISH_LANG:

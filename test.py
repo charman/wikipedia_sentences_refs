@@ -524,6 +524,30 @@ class TestSpanish(unittest.TestCase):
         cli_argv = ['get_sents_refs.py', '-l', 'es', 'Death_and_state_funeral_of_Hugo_Ch%C3%A1vez']
         self.assertRaises(SystemExit, get_sents_refs.main, cli_argv)
 
+    def test_normalize_title_en(self):
+        """
+        Passing the title Cellulose_plant_conflict_between_Argentina_and_Uruguay should get redirected to 'Uruguay River pulp mill dispute'
+        """
+        lang = 'en',
+        title = u'Cellulose_plant_conflict_between_Argentina_and_Uruguay'
+
+        expect = u'Uruguay River pulp mill dispute'
+        actual = get_sents_refs.redirected_title(title)
+
+        self.assertEqual(expect, actual)
+
+    def test_normalize_title_en_specchar(self):
+        """
+        Passing the title fiancé should get redirected to Engagement.
+        """
+        lang = 'en',
+        title = u'fianc\xe9'
+
+        expect = u'Engagement'
+        actual = get_sents_refs.redirected_title(title)
+
+        self.assertEqual(expect, actual)
+
 
 if __name__ == '__main__':
     unittest.main()
