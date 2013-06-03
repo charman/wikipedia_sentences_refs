@@ -46,16 +46,18 @@ def _handle_args(argv):
     )
     return parser.parse_args(argv[1:])
 
-def scrape_wikitext(title, lang=ENGLISH_LANG):
+def scrape_wikitext(title, lang=ENGLISH_LANG, expand_templates=False):
     params = {
-        "format":"xml",
-        "action":"query",
-        "prop":"revisions",
-        "rvprop":"content",
-        "rvlimit":"1",
-        "redirects":"",
+        "format": "xml",
+        "action": "query",
+        "prop": "revisions",
+        "rvprop": "content",
+        "rvlimit": "1",
+        "redirects": "",
     }
-    params["titles"] = "%s" % urllib.quote(title.encode('utf8'))
+    if expand_templates:
+        params['rvexpandtemplates'] = ''
+    params["titles"] = "%s" % urllib.quote(title.encode('utf-8'))
     qs = "&".join("%s=%s" % (k, v)  for k, v in params.items())
     url = "http://%s.wikipedia.org/w/api.php?%s" % (lang, qs)
     try:
@@ -76,6 +78,14 @@ def scrape_wikitext(title, lang=ENGLISH_LANG):
     # Remove everything starting with the '<references\s*/>' tag.
     return unicode(re.split(r'<references\s*/>', wikitext)[0])
 
+def clean_wikitext(wikitext):
+    wikitext = wikitext.replace('\t', ' ')
+    wikitext = wikitext.replace('&nbsp;', ' ')
+    wikitext = fixup_named_refs(wikitext)
+    wikitext = sanitize_html.safe_html(wikitext)
+    #wikitext = '\n'.join(line.strip() for line in wikitext.split('\n'))
+    return wikitext
+
 def redirected_title(english_title):
     """
     Returns the title of the page where this title redirects to. If there is no
@@ -87,7 +97,7 @@ def redirected_title(english_title):
         'action=query&'
         'titles=%s&'
         'redirects'
-        % urllib.quote(english_title.encode('utf8'))
+        % urllib.quote(english_title.encode('utf-8'))
     )
     response = urllib.urlopen(url).read()
     soup = BeautifulSoup(response)
@@ -109,7 +119,7 @@ def translated_title(english_title, lang):
         'titles=%s&'
         'prop=langlinks&'
         'lllimit=500'
-        % urllib.quote(english_title.encode('utf8'))
+        % urllib.quote(english_title.encode('utf-8'))
     )
     lang_links = urllib.urlopen(url).read()
     soup = BeautifulSoup(lang_links)
@@ -122,25 +132,31 @@ def translated_title(english_title, lang):
         )
         sys.exit(error_msg)
 
-def split_sentences(text):
+def split_sentences(text, lang=ENGLISH_LANG):
     """
     Return a list of sentences split using splitta. The only whitespace should
     be single space characters.
     """
 
+    if lang == ENGLISH_LANG:
+        language = 'english'
+    elif lang == 'es':
+        language = 'spanish'
+    else:
+        language = 'english'
+
     # Can I use splitta instead of nltk here?
     sent_detector = nltk.data.load(
-        'tokenizers/punkt/%s.pickle' % 'english'
+        'tokenizers/punkt/%s.pickle' % language
     ).tokenize
 
-    # Ignore blank lines.
+    # Don't ignore blank lines.
     result = []
     lines = text.split('\n')
 
     for line in lines:
         result.extend(
-            line for line in sent_detector(line)
-            if line.strip()
+            line.strip() for line in sent_detector(line)
         )
 
     return result
@@ -196,7 +212,6 @@ def collect_refs(wikitext):
         else:
             reftoken = map_refnames_to_reftokens[name]
 
-
         prev_urls = map_reftoken_to_urls.get(reftoken, set())
         prev_urls.update(urls)
         map_reftoken_to_urls[reftoken] = prev_urls
@@ -237,7 +252,8 @@ def urls_for_lines(sentences, map_reftoken_to_urls, plain_text_with_reftokens):
     # non-alphabet into tokens. Skip the empty strings.
     sent_tokens = [
         [
-            token  for token in re.split(r'[^a-zA-Z]+', sent) if token != ''
+            token  for token in re.split(r'\W+', sent, flags=re.UNICODE)
+            if token != ''
         ]
         for sent in sentences
     ]
@@ -262,7 +278,7 @@ def urls_for_lines(sentences, map_reftoken_to_urls, plain_text_with_reftokens):
               pass
 
         for token_idx, token in enumerate(tokens):
-            token_re = re.compile(token)
+            token_re = re.compile(token, re.UNICODE)
 
             # Get all the text until this token is matched, but don't match
             # anything inside <ref.*></ref> tags.
@@ -274,7 +290,7 @@ def urls_for_lines(sentences, map_reftoken_to_urls, plain_text_with_reftokens):
                     'is:\n{}'.format(
                         token_re.pattern,
                         token_re.pattern,
-                        scanner.rest().encode('utf8')
+                        scanner.rest().encode('utf-8')
                     )
                 )
 
@@ -304,7 +320,7 @@ def urls_for_lines(sentences, map_reftoken_to_urls, plain_text_with_reftokens):
 
 def prune_lines(sentences_and_refurls):
     """
-    Ignore blank lines
+    Don't ignore blank lines
     Ignore everything beginning with the References section header.
     Ignore all other section header lines
     Ignore sentences with fewer than 2 tokens
@@ -315,32 +331,40 @@ def prune_lines(sentences_and_refurls):
         sent = item[0].strip()
 
         # Ignore blank lines
-        if sent == '':
-            continue
+        if sent != '':
+            # Ignore everything beginning with the References or Notes section header.
+            if sent.strip('=') == 'References':
+                break
 
-        # Ignore everything beginning with the References or Notes section header.
-        if sent.strip('=') == 'References':
-            break
+            # Ignore all other section header lines
+            if sent[0] == '=' and sent[-1] == '=':
+                continue
 
-        # Ignore all other section header lines
-        if sent[0] == '=' and sent[-1] == '=':
-            continue
-
-        # Ignore all other section header lines
-        if len(sent.split()) < 2:
-            continue
+            # Ignore all other section header lines
+            if len(sent.split()) < 2:
+                continue
 
         result.append(item)
 
     return result
 
 def strip_wikitext_markup(wikitext):
-    soup = BeautifulSoup(wikitext)
-    refs = soup.find_all('ref')
-    for ref in refs:
+    #wikitext = u"<html><body>%s</body></html>" % wikitext
+    #wikitext = re.sub(r'<(.*?)/>', '', wikitext, re.S | re.MULTILINE)
+    #wikitext = wiki2plain.Wiki2Plain(wikitext).text
+    #soup = BeautifulSoup(wikitext)
+    #body = soup.find_all('body')[0]
+    # for tag_span in body.find_all(name=re.compile(".*")):
+    #     tag_span.replace_with('_')
+    #wikitext = soup.get_text()
+    #wikitext = '\n'.join([text for text in soup.strings])
+    #return wiki2plain.Wiki2Plain(unicode(body.string)).text
+    body = BeautifulSoup(wikitext).body
+    for table in body.find_all('table'):
+        table.extract()
+    for ref in body.find_all('ref'):
         ref.replace_with(' ')
-    wikitext = unicode(soup.get_text())
-    return unicode(wiki2plain.Wiki2Plain(wikitext).text)
+    return wiki2plain.Wiki2Plain(unicode(body.text)).text
 
 def main(argv):
     args = _handle_args(argv)
@@ -351,7 +375,7 @@ def main(argv):
         english_title = urllib.unquote(args.english_title)
     else:
         english_title = args.english_title
-    english_title = unicode(english_title, encoding='utf8')
+    english_title = unicode(english_title, encoding='utf-8')
 
     # Get the redirected title if necessary.
     english_title = redirected_title(english_title)
@@ -363,14 +387,10 @@ def main(argv):
         title = translated_title(english_title, language)
 
     # Download the page in wikitext format.
-    wikitext = scrape_wikitext(title, language)
+    wikitext = scrape_wikitext(title, language, True)
     # Since the result will be tab-separated text, remove all tabs from the
     # source.
-    wikitext = wikitext.replace('\t', ' ')
-    wikitext = wikitext.replace('&nbsp;', ' ')
-    wikitext = fixup_named_refs(wikitext)
-    wikitext = sanitize_html.safe_html(wikitext)
-    wikitext = '\n'.join(line.strip() for line in wikitext.split('\n') if line.strip())
+    wikitext = clean_wikitext(wikitext)
 
     # Render a text-only representation of the page and sentence-split it.
     sentences = split_sentences(strip_wikitext_markup(wikitext))
@@ -402,4 +422,4 @@ def main(argv):
     return result_string
 
 if __name__ == '__main__':
-    print(main(sys.argv).encode('utf8'))
+    print(main(sys.argv).encode('utf-8'))

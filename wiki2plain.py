@@ -11,7 +11,7 @@ class Wiki2Plain:
         self.wiki = wiki
 
         self.text = wiki
-        self.text = self.unhtml(self.text)
+        #self.text = self.unhtml(self.text)
         self.text = self.unwiki(self.text)
         self.text = self.punctuate(self.text)
 
