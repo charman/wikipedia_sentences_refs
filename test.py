@@ -465,7 +465,10 @@ class TestComplicatedRefs(unittest.TestCase):
             },
             wikitext_Aquamole_Pot_complicated_refs_replaced
         )
-        actual = get_sents_refs.collect_refs(wikitext_Aquamole_Pot_complicated_refs)
+        map_reftoken_to_urls, wikitext_with_reftokens = \
+            get_sents_refs.collect_refs(
+                wikitext_Aquamole_Pot_complicated_refs
+        )
         sorted_mapping = {k: sorted(v) for k, v in actual[0].items()}
         actual = sorted_mapping, actual[1]
         self.assertEqual(expect[1], actual[1])
@@ -646,7 +649,6 @@ class TestSpanish(unittest.TestCase):
 
 class TestAquamolePotSentences(unittest.TestCase):
 
-    @unittest.skip('')
     def test_sentences(self):
         expect = [
             u'Aquamole Pot is a cave in West Kingsdale, North Yorkshire, England.',
@@ -660,6 +662,63 @@ class TestAquamolePotSentences(unittest.TestCase):
         ]
         actual = get_sents_refs.split_sentences(wikitext_Aquamole_Pot_expanded_templates)
         self.assertEqual(expect, actual)
+
+
+class TestSimple(unittest.TestCase):
+
+    def setUp(self):
+        wikitext = [
+            'Foo.<ref>{{cite journal | url = "testurl0"}}</ref>',
+            '',
+            'Bar<ref name="ref 0">{{cite journal | url="testurl0"}}</ref>baz.',
+            '',
+            '',
+            'Hello, world. What is the meaning of this?',
+            'biz<ref name="ref 0">{{cite journal | url = "testurl3"}}</ref>',
+            '<ref name ="ref 1">{{cite journal | url = "testurl1"}}</ref>bang',
+        ]
+        self.wikitext = '\n'.join(wikitext) + '\n'
+
+        wikitext = [
+            'Foo. coeref0 ',
+            '',
+            'Bar coeref1 baz.',
+            '',
+            '',
+            'Hello, world. What is the meaning of this?',
+            'biz coeref1 ',
+            ' coeref2 bang',
+        ]
+        self.wikitext_with_reftokens = '\n'.join(wikitext) + '\n'
+
+        self.expected_map_reftoken_to_urls = {
+            'coeref0': ['testurl0'],
+            'coeref1': ['testurl0', 'testurl3'],
+            'coeref2': ['testurl1'],
+        }
+
+        self.expected_urls_list = [
+            ['testurl0'],
+            [],
+            ['testurl0', 'testurl3'],
+            [],
+            [],
+            [],
+            ['testurl0', 'testurl3'],
+            ['testurl1'],
+        ]
+
+    def test_map_reftoken_to_urls(self):
+        self.assertItemsEqual(
+            self.expected_map_reftoken_to_urls,
+            get_sents_refs.collect_refs(self.wikitext)[0]
+        )
+
+    def test_wikitext_with_reftokens(self):
+        self.assertItemsEqual(
+            self.wikitext_with_reftokens,
+            get_sents_refs.collect_refs(self.wikitext)[1]
+        )
 
 
 if __name__ == '__main__':
