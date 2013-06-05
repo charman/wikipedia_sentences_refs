@@ -8,6 +8,14 @@ from string_scanner.scanner import Scanner
 #from ddt import ddt, data
 import wiki2plain
 
+def parallel_print(list1, list2):
+    list1.extend(["", ""])
+    list2.extend(["", ""])
+    return '\n'.join([
+        "{:<40}{:<40}".format(l, r)
+        for l, r in zip(list2, list1)
+    ])
+
 cloud_links = """
 <?xml version="1.0"?>
 <api>
@@ -507,11 +515,15 @@ Work restarted in 2000 when divers who were keen on a quick route to the sump be
         ]
         actual = [sorted(list) for list in get_sents_refs.urls_for_lines(
             sentences_Aquamole_Pot,
-            {u'coeref0': [u'http://www.wildplaces.co.uk/descent/descent168.html',
-                          u'http://www.wildplaces.co.uk/descent/descent170.html'],
+            {u'coeref0': [
+                    u'http://www.wildplaces.co.uk/descent/descent168.html',
+                    u'http://www.wildplaces.co.uk/descent/descent170.html'
+                ],
              u'coeref1': [],
-             u'coeref2': [u'http://www.wildplaces.co.uk/descent/descent168.html',
-                          u'http://www.wildplaces.co.uk/descent/descent169.html'],
+             u'coeref2': [
+                    u'http://www.wildplaces.co.uk/descent/descent168.html',
+                    u'http://www.wildplaces.co.uk/descent/descent169.html'
+                ],
             },
             unicode(wiki2plain.Wiki2Plain(wikitext_Aquamole_Pot_complicated_refs_replaced).text)
         )]
@@ -672,7 +684,6 @@ class TestSimple(unittest.TestCase):
             '',
             'Bar<ref name="ref 0">{{cite journal | url="testurl0"}}</ref>baz.',
             '',
-            '',
             'Hello, world. What is the meaning of this?',
             'biz<ref name="ref 0">{{cite journal | url = "testurl3"}}</ref>',
             '<ref name ="ref 1">{{cite journal | url = "testurl1"}}</ref>bang',
@@ -680,14 +691,14 @@ class TestSimple(unittest.TestCase):
         self.wikitext = '\n'.join(wikitext) + '\n'
 
         self.sentences = [
-            'Foo.',
+            'Foo. ',
             '',
             'Bar baz.',
             '',
-            '',
-            'Hello, world. What is the meaning of this?',
-            'biz<ref name="ref 0">{{cite journal | url = "testurl3"}}</ref>',
-            '<ref name ="ref 1">{{cite journal | url = "testurl1"}}</ref>bang',
+            'Hello, world.',
+            "What's up?",
+            'biz ',
+            ' bang',
         ]
 
         wikitext = [
@@ -695,8 +706,7 @@ class TestSimple(unittest.TestCase):
             '',
             'Bar coeref1 baz.',
             '',
-            '',
-            'Hello, world. What is the meaning of this?',
+            "Hello, world. What's up?",
             'biz coeref1 ',
             ' coeref2 bang',
         ]
@@ -715,8 +725,8 @@ class TestSimple(unittest.TestCase):
             [],
             [],
             [],
-            ['testurl0', 'testurl3'],
-            ['testurl1'],
+            ['testurl0', 'testurl3', 'testurl1'],
+            []
         ]
 
     def test_map_reftoken_to_urls(self):
@@ -732,10 +742,16 @@ class TestSimple(unittest.TestCase):
         )
 
     def test_urls_list(self):
-        self.assertItemsEqual(
-            self.expected_urls_list,
-            get_sents_refs.collect_refs(self.wikitext)[1]
+        actual = get_sents_refs.urls_for_lines(
+            self.sentences,
+            self.expected_map_reftoken_to_urls,
+            self.wikitext_with_reftokens
         )
+
+        expect = self.expected_urls_list
+        self.assertEqual(len(expect), len(actual))
+        for expect, actual in zip(expect, actual):
+            self.assertItemsEqual(expect, actual)
 
 
 class TestFixParagraphBoundaries(unittest.TestCase):
@@ -759,6 +775,7 @@ class TestFixParagraphBoundaries(unittest.TestCase):
         ]) + '\n'
 
         actual = get_sents_refs.fix_paragraph_boundaries(wikitext)
+
         self.assertEqual(expect, actual)
 
 if __name__ == '__main__':

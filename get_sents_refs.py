@@ -16,10 +16,7 @@ import sanitize_html
 
 ENGLISH_LANG = 'en'
 
-REFTOKEN_RE = re.compile(
-    'coeref\d+',
-    re.MULTILINE | re.DOTALL
-)
+REFTOKEN_RE = re.compile('coeref\d+')
 
 def _handle_args(argv):
     """
@@ -79,7 +76,7 @@ def scrape_wikitext(title, lang=ENGLISH_LANG, expand_templates=False):
     return unicode(re.split(r'<references\s*/>', wikitext)[0])
 
 def fix_paragraph_boundaries(wikitext):
-    return re.sub('\n\n+', '\n\n', wikitext)
+    return re.sub('\n\n+', '\n\n', wikitext, flags=re.MULTILINE)
 
 def clean_wikitext(wikitext):
     wikitext = wikitext.replace('\t', ' ')
@@ -255,16 +252,22 @@ def urls_for_lines(sentences, map_reftoken_to_urls, plain_text_with_reftokens):
     # non-alphabet into tokens. Skip the empty strings.
     sent_tokens = [
         [
-            token  for token in re.split(r'\W+', sent, flags=re.UNICODE)
-            if token != ''
+            token for token in re.split(r'\W+', sent, flags=re.UNICODE)
+            if token
         ]
+        or ['']
         for sent in sentences
     ]
 
     scanner = Scanner()
     scanner.string = plain_text_with_reftokens
 
-    for sent_number in range(len(sent_tokens)):
+    for sent_number in range(len(sentences)):
+
+        if sent_tokens[sent_number] == ['']:
+            result.append([])
+            continue
+
         urls = set()
 
         # Scan through the plain text, matching the second token in the
@@ -272,20 +275,20 @@ def urls_for_lines(sentences, map_reftoken_to_urls, plain_text_with_reftokens):
         # Assume there are no refs before the first word in the first sentence.
         tokens = sent_tokens[sent_number][1:]
 
-        if sent_number < len(sent_tokens) - 1:
-            # The first word of the next sentence (if the next sentence is not
-            # empty):
-            try:
-              tokens.append(sent_tokens[sent_number + 1][0])
-            except IndexError:
-              pass
+        # Include the first word of the next sentence (if the next sentence is
+        # not empty):
+        if sent_number < len(sent_tokens) - 1 and sent_tokens[sent_number + 1]:
+            if sent_tokens[sent_number + 1] == ['']:
+                tokens.append('\n\n')
+            else:
+                tokens.append(sent_tokens[sent_number + 1][0])
 
         for token_idx, token in enumerate(tokens):
+            #token_re = re.compile(token, re.UNICODE | re.MULTILINE)
             token_re = re.compile(token, re.UNICODE)
 
-            # Get all the text until this token is matched, but don't match
-            # anything inside <ref.*></ref> tags.
-            # Collect the urls in this range.
+            # Get all the text until this token is matched.
+            # Collect the reftokens in this range.
 
             if scanner.check_to(token_re) is None:
                 sys.exit(
@@ -302,6 +305,7 @@ def urls_for_lines(sentences, map_reftoken_to_urls, plain_text_with_reftokens):
             # Move the scanner ahead, and make an assertion.
             #assert scanner.scan(token_re) is not None
             scanner.scan(token_re)
+            next_chunk += token
 
             if sent_number == len(sent_tokens) - 1:
                 if token_idx == len(sent_tokens[sent_number]) - 1:
@@ -310,12 +314,12 @@ def urls_for_lines(sentences, map_reftoken_to_urls, plain_text_with_reftokens):
                     assert next_chunk is not None
 
             # Collect the urls for this line of text.
-            flattend_urls_list = [
+            flattened_urls_list = [
                 url
                 for reftoken in REFTOKEN_RE.findall(next_chunk)
                 for url in map_reftoken_to_urls[reftoken]
             ]
-            urls.update(flattend_urls_list)
+            urls.update(flattened_urls_list)
 
         result.append(list(urls))
 
@@ -335,7 +339,8 @@ def prune_lines(sentences_and_refurls):
 
         # Ignore blank lines
         if sent != '':
-            # Ignore everything beginning with the References or Notes section header.
+            # Ignore everything beginning with the References or Notes section
+            # header.
             if sent.strip('=') == 'References':
                 break
 
@@ -411,7 +416,9 @@ def main(argv):
         strip_wikitext_markup(wikitext_with_reftokens)
     )
 
-    # Discard lines that are not interesting.
+    assert len(sentences) == len(line_urls)
+
+    # Merge together each sentence and its URLs.
     sentences_and_refurls = prune_lines(
         [sentence] + urls
         for sentence, urls in zip(sentences, line_urls)
