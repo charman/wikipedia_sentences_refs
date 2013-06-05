@@ -679,6 +679,17 @@ class TestSimple(unittest.TestCase):
         ]
         self.wikitext = '\n'.join(wikitext) + '\n'
 
+        self.sentences = [
+            'Foo.',
+            '',
+            'Bar baz.',
+            '',
+            '',
+            'Hello, world. What is the meaning of this?',
+            'biz<ref name="ref 0">{{cite journal | url = "testurl3"}}</ref>',
+            '<ref name ="ref 1">{{cite journal | url = "testurl1"}}</ref>bang',
+        ]
+
         wikitext = [
             'Foo. coeref0 ',
             '',
@@ -720,6 +731,35 @@ class TestSimple(unittest.TestCase):
             get_sents_refs.collect_refs(self.wikitext)[1]
         )
 
+    def test_urls_list(self):
+        self.assertItemsEqual(
+            self.expected_urls_list,
+            get_sents_refs.collect_refs(self.wikitext)[1]
+        )
+
+
+class TestFixParagraphBoundaries(unittest.TestCase):
+    r"""
+    Fix the boundary between paragraphs to two consecutive \n characters.
+    """
+
+    def test(self):
+        wikitext = '\n'.join([
+            '1', '',
+            '2', '', '',
+            '3', '', '', '',
+            '4', '', '', '', '',
+        ]) + '\n'
+
+        expect = '\n'.join([
+            '1', '',
+            '2', '',
+            '3', '',
+            '4', '',
+        ]) + '\n'
+
+        actual = get_sents_refs.fix_paragraph_boundaries(wikitext)
+        self.assertEqual(expect, actual)
 
 if __name__ == '__main__':
     unittest.main()

@@ -78,6 +78,9 @@ def scrape_wikitext(title, lang=ENGLISH_LANG, expand_templates=False):
     # Remove everything starting with the '<references\s*/>' tag.
     return unicode(re.split(r'<references\s*/>', wikitext)[0])
 
+def fix_paragraph_boundaries(wikitext):
+    return re.sub('\n\n+', '\n\n', wikitext)
+
 def clean_wikitext(wikitext):
     wikitext = wikitext.replace('\t', ' ')
     wikitext = wikitext.replace('&nbsp;', ' ')
