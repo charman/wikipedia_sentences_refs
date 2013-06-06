@@ -663,15 +663,22 @@ class TestAquamolePotSentences(unittest.TestCase):
     def test_sentences(self):
         expect = [
             u'Aquamole Pot is a cave in West Kingsdale, North Yorkshire, England.',
-            u'It was originally explored from below by cave divers who had negotiated 550 feet (170 m) of sump passage from Rowten Pot in 1974, to discover a high aven above the river passage. ',
-            u'History'
-            u''
+            u'It was originally explored from below by cave divers who had negotiated 550 feet (170 m) of sump passage from Rowten Pot in 1974, to discover a high aven above the river passage.',
+            u'',
+            u'History',
+            u'',
             u'The 130 feet (40 m) aven was scaled in 1980 using poles, ladders and hand bolting kits, and a radio location transmitter placed at the highest point.',
-            u'Having discovered it was 180 feet (55 m) from, and 180 feet (55 m) below Jingling Pot, the aven was renamed Aquamole Aven instead of Jingling Avens. ',
+            u'Having discovered it was 180 feet (55 m) from, and 180 feet (55 m) below Jingling Pot, the aven was renamed Aquamole Aven instead of Jingling Avens.',
+            u'',
             u'Work restarted in 2000 when divers who were keen on a quick route to the sump beyond, rescaled the avens to a higher point, and radio located a position to 50 feet (15 m) below the moor.',
-            u'It was finally connected to the surface in June 2002. ',
+            u'It was finally connected to the surface in June 2002.',
+            u'',
         ]
-        actual = get_sents_refs.split_sentences(wikitext_Aquamole_Pot_expanded_templates)
+        actual = get_sents_refs.split_sentences(
+            get_sents_refs.strip_wikitext_markup(
+                wikitext_Aquamole_Pot_expanded_templates
+            )
+        )
         self.assertEqual(expect, actual)
 
 

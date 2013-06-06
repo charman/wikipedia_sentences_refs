@@ -155,8 +155,11 @@ def split_sentences(text, lang=ENGLISH_LANG):
     lines = text.split('\n')
 
     for line in lines:
+        if line.strip().strip('=').strip() == 'References':
+            break
+
         result.extend(
-            line.strip() for line in sent_detector(line)
+            line.strip().strip('=') for line in sent_detector(line)
         )
 
     return result
@@ -291,14 +294,15 @@ def urls_for_lines(sentences, map_reftoken_to_urls, plain_text_with_reftokens):
             # Collect the reftokens in this range.
 
             if scanner.check_to(token_re) is None:
-                sys.exit(
-                    '\nERROR: can\'t find token "{}". Everything after "{}" '
-                    'is:\n{}'.format(
-                        token_re.pattern,
-                        token_re.pattern,
-                        scanner.rest().encode('utf-8')
-                    )
-                )
+                continue
+                # sys.exit(
+                #     '\nERROR: can\'t find token "{}". Everything after "{}" '
+                #     'is:\n{}'.format(
+                #         token_re.pattern,
+                #         token_re.pattern,
+                #         scanner.rest().encode('utf-8')
+                #     )
+                # )
 
             next_chunk = scanner.scan_to(token_re)
 
@@ -344,13 +348,13 @@ def prune_lines(sentences_and_refurls):
             if sent.strip('=') == 'References':
                 break
 
-            # Ignore all other section header lines
-            if sent[0] == '=' and sent[-1] == '=':
-                continue
+            # # Ignore all other section header lines
+            # if sent[0] == '=' and sent[-1] == '=':
+            #     continue
 
-            # Ignore all other section header lines
-            if len(sent.split()) < 2:
-                continue
+            # # Ignore all other section header lines
+            # if len(sent.split()) < 2:
+            #     continue
 
         result.append(item)
 
@@ -415,6 +419,8 @@ def main(argv):
         map_reftoken_to_urls,
         strip_wikitext_markup(wikitext_with_reftokens)
     )
+
+    sentences = split_sentences(strip_wikitext_markup(wikitext))
 
     assert len(sentences) == len(line_urls)
 
