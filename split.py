@@ -1,4 +1,7 @@
 # -*- encoding: utf-8 -*-
+from __future__ import print_function
+import sys
+from subprocess import Popen, PIPE
 import nltk  # for now.
 
 class SentenceSplitter(object):
@@ -10,15 +13,20 @@ class SentenceSplitter(object):
         return self._lang
 
 
+class SplittaSentenceSplitter(SentenceSplitter):
+    pass
+
 
 class FreelingSentenceSplitter(SentenceSplitter):
 
     def split(self, input_text):
-        return [
-            '* un régimen de comunicaciones e inspecciones frente a cualquier '
-            'obra que pueda afectar la calidad de las aguas '
-            '(arts. 7 a 12);'.decode('utf-8')
-        ]
+        cmd = ['/home/hltcoe/mmitchell/SCALE/spanish_sentence_split.sh']
+        p = Popen(cmd, stdin=PIPE, stderr=PIPE, stdout=PIPE)
+        out, err = p.communicate(input_text.encode('utf-8'))
+        #if not p.returncode:
+        #    sys.stderr.write(err.decode('utf-8'))
+        #    raise IOError
+        return out.decode('utf-8').strip('\n').split('\n')
 
 
 def split_sentences(text):
@@ -42,3 +50,7 @@ def new_splitter(lang):
         'es': FreelingSentenceSplitter,
     }
     return lang_splitter[lang](lang)
+
+
+if __name__ == '__main__':
+    FreelingSentenceSplitter('es').split('hi')
