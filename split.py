@@ -3,6 +3,7 @@ from __future__ import print_function
 import sys
 from subprocess import Popen, PIPE
 import nltk  # for now.
+import splitta_tokenizer
 
 class SentenceSplitter(object):
     def __init__(self, lang_code):
@@ -12,9 +13,14 @@ class SentenceSplitter(object):
     def language(self):
         return self._lang
 
+    def split(self):
+        pass
+
 
 class SplittaSentenceSplitter(SentenceSplitter):
-    pass
+
+    def split(self, input_text):
+        return splitta_tokenizer.tokenize(input_text)
 
 
 class FreelingSentenceSplitter(SentenceSplitter):

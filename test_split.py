@@ -42,3 +42,24 @@ class TestSentenceSplitter(unittest.TestCase):
         expect = self.expected_output2
         actual = splitter.split(self.input_sent2)
         self.assertEqual(expect, actual)
+
+    def test_new_splitter_en1(self):
+        splitter = new_splitter('en')
+        input_text = unicode(
+            'This is the tale of Mr. Morton. '
+            'Who is Mr. Morton? '
+            #'Mr. Morton is who? '
+            'He is the subject of our tale, and the predicate tells what Mr. '
+            'Morton must do.'
+        )
+        expect = [
+            u'This is the tale of Mr. Morton.',
+            #u'Mr. Morton is who? ',
+            u'Who is Mr. Morton?',
+            unicode(
+                'He is the subject of our tale, and the predicate tells what '
+                'Mr. Morton must do.'
+            ),
+        ]
+        actual = splitter.split(input_text)
+        self.assertEqual(expect, actual)
