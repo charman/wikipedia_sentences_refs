@@ -1,3 +1,6 @@
 [submodule "lib/python-string-scanner"]
 	path = lib/python-string-scanner
 	url = git@github.com:markwatkinson/python-string-scanner.git
+[submodule "lib/splitta"]
+	path = lib/splitta
+	url = git@github.com:lukeorland/splitta.git
