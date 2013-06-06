@@ -476,11 +476,10 @@ class TestComplicatedRefs(unittest.TestCase):
         map_reftoken_to_urls, wikitext_with_reftokens = \
             get_sents_refs.collect_refs(
                 wikitext_Aquamole_Pot_complicated_refs
-        )
-        sorted_mapping = {k: sorted(v) for k, v in actual[0].items()}
-        actual = sorted_mapping, actual[1]
-        self.assertEqual(expect[1], actual[1])
-        self.assertEqual(expect[0], actual[0])
+            )
+
+        self.assertItemsEqual(map_reftoken_to_urls, expect[0])
+        self.assertItemsEqual(wikitext_with_reftokens, expect[1])
 
     def test_strip_wikitext_markup(self):
         expect = """Aquamole Pot is a cave in West Kingsdale, North Yorkshire, England. It was originally explored from below by cave divers who had negotiated 550 feet (170 m) of sump passage from Rowten Pot in 1974, to discover a high aven above the river passage.
