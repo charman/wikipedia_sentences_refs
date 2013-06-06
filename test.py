@@ -850,5 +850,14 @@ Work restarted in 2000 when divers who were keen on a quick route to the sump be
             ['http://www.wildplaces.co.uk/descent/descent168.html']
         )
 
+
+        def test_clean_wikitext(self):
+            wikitext = '1\n  \t\n\n2\n'
+            self.assertEqual(
+                '1\n\n2\n',
+                get_sents_refs.clean_wikitext(wikitext)
+            )
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -110,9 +110,14 @@ def fix_paragraph_boundaries(wikitext):
 def clean_wikitext(wikitext):
     wikitext = wikitext.replace('\t', ' ')
     wikitext = wikitext.replace('&nbsp;', ' ')
+    wikitext = re.sub(
+        r'\n\s*\n+',
+        r'\n\n',
+        wikitext,
+        flags=re.UNICODE | re.MULTILINE
+    )
     wikitext = fixup_named_refs(wikitext)
     wikitext = sanitize_html.safe_html(wikitext)
-    #wikitext = '\n'.join(line.strip() for line in wikitext.split('\n'))
     return wikitext
 
 def redirected_title(english_title):
