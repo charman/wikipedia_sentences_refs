@@ -684,7 +684,7 @@ class TestSimple(unittest.TestCase):
             '',
             'Bar<ref name="ref 0">{{cite journal | url="testurl0"}}</ref>baz.',
             '',
-            'Hello, world. What is the meaning of this?',
+            "Hello, world. What's up?",
             'biz<ref name="ref 0">{{cite journal | url = "testurl3"}}</ref>',
             '<ref name ="ref 1">{{cite journal | url = "testurl1"}}</ref>bang',
         ]
