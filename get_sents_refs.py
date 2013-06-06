@@ -22,10 +22,9 @@ from string_scanner.scanner import Scanner
 import mwparserfromhell
 import sanitize_html
 
-
 ENGLISH_LANG = 'en'
-
 REFTOKEN_RE = re.compile('coeref\d+')
+
 
 class LineWithRefs(object):
 
