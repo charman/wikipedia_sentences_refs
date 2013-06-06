@@ -512,7 +512,7 @@ Work restarted in 2000 when divers who were keen on a quick route to the sump be
              u'http://www.wildplaces.co.uk/descent/descent170.html'],
             [],
         ]
-        actual = [sorted(list) for list in get_sents_refs.urls_for_lines(
+        result = get_sents_refs.urls_for_lines(
             sentences_Aquamole_Pot,
             {u'coeref0': [
                     u'http://www.wildplaces.co.uk/descent/descent168.html',
@@ -525,8 +525,11 @@ Work restarted in 2000 when divers who were keen on a quick route to the sump be
                 ],
             },
             unicode(wiki2plain.Wiki2Plain(wikitext_Aquamole_Pot_complicated_refs_replaced).text)
-        )]
-        self.assertEqual(expect, actual)
+        )
+        actual = [line.urls for line in result]
+        self.assertEqual(len(expect), len(actual))
+        for i in range(len(expect)):
+            self.assertItemsEqual(expect[i], actual[i])
 
 
 class TestFixupWikitext(unittest.TestCase):
@@ -748,16 +751,19 @@ class TestSimple(unittest.TestCase):
         )
 
     def test_urls_list(self):
-        actual = get_sents_refs.urls_for_lines(
+        result = get_sents_refs.urls_for_lines(
             self.sentences,
             self.expected_map_reftoken_to_urls,
             self.wikitext_with_reftokens
         )
 
+        print(result)
         expect = self.expected_urls_list
+        self.assertEqual(len(expect), len(result))
+        actual = [line.urls for line in result]
         self.assertEqual(len(expect), len(actual))
-        for expect, actual in zip(expect, actual):
-            self.assertItemsEqual(expect, actual)
+        for i in range(len(expect)):
+            self.assertItemsEqual(expect[i], actual[i])
 
 
 class TestFixParagraphBoundaries(unittest.TestCase):
@@ -783,6 +789,66 @@ class TestFixParagraphBoundaries(unittest.TestCase):
         actual = get_sents_refs.fix_paragraph_boundaries(wikitext)
 
         self.assertEqual(expect, actual)
+
+
+class TestAMP(unittest.TestCase):
+
+    def test(self):
+        mapping = {
+            'coeref0': [u'http://www.wildplaces.co.uk/descent/descent168.html']
+        }
+
+        wikitext_with_refs = """[[Category:Wikipedia cave articles with unreferenced coordinates|Aquamole Pot]]
+
+'''Aquamole Pot''' is a cave in West [[Kingsdale]], [[North Yorkshire]], England. It was originally explored from below by cave divers who had negotiated 550 feet (170 m) of [[Sump (cave)|sump]] passage from [[Rowten Pot]] in 1974, to discover a high [[Pitch (ascent/descent)|aven]] above the river passage.
+
+==Hístory==
+
+The 130 feet (40 m) aven was scaled in 1980 using poles, ladders and hand bolting kits, and a radio location transmitter placed at the highest point. Having discovered it was 180 feet (55 m) from, and 180 feet (55 m) below [[Jingling Pot]], the aven was renamed Aquamole Aven instead of Jingling Avens.
+
+Work restarted in 2000 when divers who were keen on a quick route to the sump beyond, rescaled the avens to a higher point, and radio located a position to 50 feet (15 m) below the moor. It was finally connected to the surface in June 2002. coeref0
+
+==References==
+
+""".decode('utf-8')
+
+        sentences = [
+            'Aquamole Pot is a cave in West Kingsdale, North Yorkshire, England.',
+            'It was originally explored from below by cave divers who had negotiated 550 feet (170 m) of sump passage from Rowten Pot in 1974, to discover a high aven above the river passage.',
+            '',
+            'Hístory'.decode('utf-8'),
+            '',
+            'The 130 feet (40 m) aven was scaled in 1980 using poles, ladders and hand bolting kits, and a radio location transmitter placed at the highest point.',
+            'Having discovered it was 180 feet (55 m) from, and 180 feet (55 m) below Jingling Pot, the aven was renamed Aquamole Aven instead of Jingling Avens.',
+            '',
+            'Work restarted in 2000 when divers who were keen on a quick route to the sump beyond, rescaled the avens to a higher point, and radio located a position to 50 feet (15 m) below the moor.',
+            'It was finally connected to the surface in June 2002.',
+            '',
+        ]
+        map_reftoken_to_urls = {
+            'coeref0': ['http://www.wildplaces.co.uk/descent/descent168.html']
+        }
+
+        result = get_sents_refs.urls_for_lines(
+            sentences,
+            map_reftoken_to_urls,
+            get_sents_refs.strip_wikitext_markup(wikitext_with_refs)
+        )
+
+        self.assertEqual(
+            result[6].urls,
+            []
+        )
+
+        self.assertEqual(
+            result[6].sentence[:6],
+            'Having'
+        )
+
+        self.assertEqual(
+            result[9].urls,
+            ['http://www.wildplaces.co.uk/descent/descent168.html']
+        )
 
 if __name__ == '__main__':
     unittest.main()

@@ -18,6 +18,35 @@ ENGLISH_LANG = 'en'
 
 REFTOKEN_RE = re.compile('coeref\d+')
 
+class LineWithRefs(object):
+
+    def __init__(self, sentence='', urls=None):
+        self._sent = sentence
+        if not urls:
+            urls = []
+        self._urls = list(urls)
+
+    @property
+    def sentence(self):
+        return self._sent
+
+    @property
+    def urls(self):
+        return self._urls
+
+    def __unicode__(self):
+        return u'\t'.join([self.sentence] + self.urls)
+
+    def __repr__(self):
+        result = super(LineWithRefs, self).__repr__()
+        result = result[:-1]  # Remove final '>' character.
+        return u'{}; {}; {}>'.format(
+            result,
+            'sentence: %s' % self.sentence,
+            'urls: %s' % self.urls,
+        )
+
+
 def _handle_args(argv):
     """
     Use argparse module to handle command line arguments
@@ -265,10 +294,10 @@ def urls_for_lines(sentences, map_reftoken_to_urls, plain_text_with_reftokens):
     scanner = Scanner()
     scanner.string = plain_text_with_reftokens
 
-    for sent_number in range(len(sentences)):
+    for sent_number, sentence in enumerate(sentences):
 
         if sent_tokens[sent_number] == ['']:
-            result.append([])
+            result.append(LineWithRefs())
             continue
 
         urls = set()
@@ -282,7 +311,7 @@ def urls_for_lines(sentences, map_reftoken_to_urls, plain_text_with_reftokens):
         # not empty):
         if sent_number < len(sent_tokens) - 1 and sent_tokens[sent_number + 1]:
             if sent_tokens[sent_number + 1] == ['']:
-                tokens.append('\n\n')
+                tokens.append('\n\s*\n')
             else:
                 tokens.append(sent_tokens[sent_number + 1][0])
 
@@ -294,6 +323,11 @@ def urls_for_lines(sentences, map_reftoken_to_urls, plain_text_with_reftokens):
             # Collect the reftokens in this range.
 
             if scanner.check_to(token_re) is None:
+                sys.stderr.write(
+                    (
+                        '\ncan\'t find token "%s".\n' % token_re.pattern
+                    ).encode('utf-8')
+                )
                 continue
                 # sys.exit(
                 #     '\nERROR: can\'t find token "{}". Everything after "{}" '
@@ -325,7 +359,7 @@ def urls_for_lines(sentences, map_reftoken_to_urls, plain_text_with_reftokens):
             ]
             urls.update(flattened_urls_list)
 
-        result.append(list(urls))
+        result.append(LineWithRefs(sentence, urls))
 
     return result
 
@@ -414,28 +448,42 @@ def main(argv):
 
     # Use the split tokens to scan the plain text version that has inserted
     # coeref tokens, and associate ref citation urls with sentences.
+
+    # line_urls = urls_for_lines(
+    #     sentences,
+    #     map_reftoken_to_urls,
+    #     strip_wikitext_markup(wikitext_with_reftokens)
+    # )
+
     line_urls = urls_for_lines(
-        sentences,
+        split_sentences(strip_wikitext_markup(wikitext)),
         map_reftoken_to_urls,
         strip_wikitext_markup(wikitext_with_reftokens)
     )
 
-    sentences = split_sentences(strip_wikitext_markup(wikitext))
+    #sentences = split_sentences(strip_wikitext_markup(wikitext))
 
     assert len(sentences) == len(line_urls)
 
-    # Merge together each sentence and its URLs.
-    sentences_and_refurls = prune_lines(
-        [sentence] + urls
-        for sentence, urls in zip(sentences, line_urls)
-    )
+    # # Merge together each sentence and its URLs.
+    # sentences_and_refurls = prune_lines(
+    #     [line.sentence] + line.urls
+    #     for line in line_urls
+    # )
+
+    # sentences_and_refurls = [
+    #     [line.sentence] + line.urls
+    #     for line in line_urls
+    # ]
 
     # Print a list of sentences, each with all its associated URLs separated
     # by tabs.
-    result_string = '\n'.join(
-        '\t'.join(result) for result in sentences_and_refurls
-    )
+    result_string = '\n'.join(unicode(line) for line in line_urls)
+
+    #print(strip_wikitext_markup(wikitext_with_reftokens))
+    print(split_sentences(strip_wikitext_markup(wikitext)))
     return result_string
 
 if __name__ == '__main__':
-    print(main(sys.argv).encode('utf-8'))
+    result = main(sys.argv).encode('utf-8')
+    print(result)
