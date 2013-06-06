@@ -1,5 +1,14 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
+
+# This script parses the wikitext for the specified Wikipedia article, and
+# outputs rendered plain text sentences, one per line. Also, for each sentence
+# that contained a <ref></ref> tag containing a "url" attribute, all such urls
+# follow the sentence, separated by the \t tab character.
+#
+# For usage details, run:
+#   ./get_sents_refs.py --help
+
 import argparse
 import json
 import re
