@@ -493,8 +493,6 @@ def main(argv):
     # by tabs.
     result_string = '\n'.join(unicode(line) for line in line_urls)
 
-    #print(strip_wikitext_markup(wikitext_with_reftokens))
-    print(split_sentences(strip_wikitext_markup(wikitext)))
     return result_string
 
 if __name__ == '__main__':
