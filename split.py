@@ -20,7 +20,7 @@ class SentenceSplitter(object):
 class SplittaSentenceSplitter(SentenceSplitter):
 
     def split(self, input_text):
-        return splitta_tokenizer.tokenize(input_text)
+        return splitta_tokenizer.tokenize(input_text, model_path='model_svm')
 
 
 class FreelingSentenceSplitter(SentenceSplitter):
