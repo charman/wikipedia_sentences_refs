@@ -859,5 +859,26 @@ Work restarted in 2000 when divers who were keen on a quick route to the sump be
             )
 
 
+class TestWikitextFile(unittest.TestCase):
+
+    def test_remove_file_span_en(self):
+        wikitext = (
+            ' [[File:Torre Pemex (5).jpg|thumb|right|250px|Torre Pemex at '
+            'night]] [[something else]]'
+        )
+        expect = u'   [[something else]]   '
+        actual = get_sents_refs.clean_wikitext(wikitext)
+        self.assertEqual(expect, actual)
+
+    def test_remove_file_span_es(self):
+        wikitext = (
+            ' [[Archivo:Torre Pemex (5).jpg|thumb|right|250px|Torre Pemex at '
+            'night]] [[something else]]'
+        )
+        expect = u'   [[something else]]   '
+        actual = get_sents_refs.clean_wikitext(wikitext)
+        self.assertEqual(expect, actual)
+
+
 if __name__ == '__main__':
     unittest.main()

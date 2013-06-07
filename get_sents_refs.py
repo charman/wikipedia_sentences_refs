@@ -124,6 +124,12 @@ def clean_wikitext(wikitext):
         wikitext,
         flags=re.UNICODE | re.MULTILINE
     )
+    wikitext = re.sub(
+        r'\[\[(File|Archivo):.*?\]\]',
+        r'',
+        wikitext,
+        flags=re.UNICODE | re.MULTILINE
+    )
     wikitext = fixup_named_refs(wikitext)
     wikitext = sanitize_html.safe_html(wikitext)
     return wikitext
