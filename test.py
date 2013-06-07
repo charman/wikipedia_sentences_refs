@@ -551,15 +551,29 @@ class TestUrlExtraction(unittest.TestCase):
 
     def test_cited_urls_containing_equal_sign(self):
         wikitext = u'chanting the [[Litany of the Saints]].<ref name="YouTube procession">{{cite AV media | title = Procession and entrance in Conclave | trans_title = | medium = Television production | language = Italian | url = https://www.youtube.com/watch?v=cTtzyr5sBkc | accessdate = 9 April 2013 | date = 12 March 2013 | publisher = Centro Televisivo Vaticano | location = Rome | quote =}}</ref> After taking their places,'
+
         expect = [u'https://www.youtube.com/watch?v=cTtzyr5sBkc']
-        actual = get_sents_refs.extract_ref_urls_from_wikitext(wikitext)
+        actual = get_sents_refs.extract_urls_from_ref(wikitext, True)
+        self.assertEqual(expect, actual)
+
+        expect = [u'https://www.youtube.com/watch?v=cTtzyr5sBkc']
+        actual = get_sents_refs.extract_urls_from_ref(wikitext)
         self.assertEqual(expect, actual)
 
     def test_uncited_and_cited_urls_in_a_ref(self):
         wikitext = u"""unclear,<ref>Willey, David (28 February 2013). [http://www.bbc.co.uk/news/world-europe-21624154 "The day Benedict XVI's papacy ended"], [[BBC News]]. 1 March 2013.</ref> and that many different priorities were at play, making this election difficult to predict.<ref>{{cite web|url=http://www.bbc.co.uk/news/world-europe-21731439 |title=The Vatican: Suspense and intrigue |publisher=BBC |date=1 January 1970 |accessdate=12 March 2013}}</ref> Cardinal [[Cormac Murphy-O'Connor]] remarked laughingly to a BBC presenter that his colleagues have been telling him "Siamo confusi&nbsp;– 'we're confused,'" as there were neither clear blocs nor a front-runner.<ref>{{cite web|last=Ivereigh |first=Austen |url=http://www.osvdailytake.com/2013/03/ivereigh-in-rome-does-cardinal.html |title=OSV Daily Take Blog: Ivereigh in Rome: Does cardinal confusion spell a long conclave? |publisher=Osvdailytake.com |accessdate=12 March 2013}}</ref> blah"""
+
         expect = [u'http://www.bbc.co.uk/news/world-europe-21731439', u'http://www.osvdailytake.com/2013/03/ivereigh-in-rome-does-cardinal.html']
-        actual = sorted(get_sents_refs.extract_ref_urls_from_wikitext(wikitext))
-        self.assertEqual(expect, actual)
+        actual = get_sents_refs.extract_urls_from_ref(wikitext, True)
+        self.assertItemsEqual(expect, actual)
+
+        expect = [
+            u'http://www.bbc.co.uk/news/world-europe-21624154',
+            u'http://www.bbc.co.uk/news/world-europe-21731439',
+            u'http://www.osvdailytake.com/2013/03/ivereigh-in-rome-does-cardinal.html'
+        ]
+        actual = get_sents_refs.extract_urls_from_ref(wikitext)
+        self.assertItemsEqual(expect, actual)
 
 
 class TestSpanish(unittest.TestCase):
@@ -689,65 +703,65 @@ class TestSimple(unittest.TestCase):
 
     def setUp(self):
         wikitext = [
-            'Foo.<ref>{{cite journal | url = "testurl0"}}</ref>',
-            '',
-            'Bar<ref name="ref 0">{{cite journal | url="testurl0"}}</ref>baz.',
-            '',
-            "Hello, world. What's up?",
-            'biz<ref name="ref 0">{{cite journal | url = "testurl3"}}</ref>',
-            '<ref name ="ref 1">{{cite journal | url = "testurl1"}}</ref>bang',
+            u'Foo.<ref>{{cite journal | url = "http://testurl0"}}</ref>',
+            u'',
+            u'Bar<ref name="ref 0">{{cite journal | url="http://testurl0"}}</ref>baz.',
+            u'',
+            u"Hello, world. What's up?",
+            u'biz<ref name="ref 0">{{cite journal | url = "http://testurl3"}}</ref>',
+            u'<ref name ="ref 1">{{cite journal | url = "http://testurl1"}}</ref>bang',
         ]
         self.wikitext = '\n'.join(wikitext) + '\n'
 
         self.sentences = [
-            'Foo. ',
-            '',
-            'Bar baz.',
-            '',
-            'Hello, world.',
-            "What's up?",
-            'biz ',
-            ' bang',
+            u'Foo. ',
+            u'',
+            u'Bar baz.',
+            u'',
+            u'Hello, world.',
+            u"What's up?",
+            u'biz ',
+            u' bang',
         ]
 
         wikitext = [
-            'Foo. coeref0 ',
-            '',
-            'Bar coeref1 baz.',
-            '',
-            "Hello, world. What's up?",
-            'biz coeref1 ',
-            ' coeref2 bang',
+            u'Foo. coeref0 ',
+            u'',
+            u'Bar coeref1 baz.',
+            u'',
+            u"Hello, world. What's up?",
+            u'biz coeref1 ',
+            u' coeref2 bang',
         ]
-        self.wikitext_with_reftokens = '\n'.join(wikitext) + '\n'
+        self.wikitext_with_reftokens = u'\n'.join(wikitext) + '\n'
 
         self.expected_map_reftoken_to_urls = {
-            'coeref0': ['testurl0'],
-            'coeref1': ['testurl0', 'testurl3'],
-            'coeref2': ['testurl1'],
+            'coeref0': [u'testurl0'],
+            'coeref1': [u'testurl0', u'testurl3'],
+            'coeref2': [u'testurl1'],
         }
 
         self.expected_urls_list = [
-            ['testurl0'],
+            [u'testurl0'],
             [],
-            ['testurl0', 'testurl3'],
+            [u'testurl0', u'testurl3'],
             [],
             [],
             [],
-            ['testurl0', 'testurl3', 'testurl1'],
+            [u'testurl0', u'testurl3', u'testurl1'],
             []
         ]
 
     def test_map_reftoken_to_urls(self):
         self.assertItemsEqual(
             self.expected_map_reftoken_to_urls,
-            get_sents_refs.collect_refs(self.wikitext)[0]
+            get_sents_refs.collect_refs(self.wikitext, True)[0]
         )
 
     def test_wikitext_with_reftokens(self):
-        self.assertItemsEqual(
-            self.wikitext_with_reftokens,
-            get_sents_refs.collect_refs(self.wikitext)[1]
+        expect = self.wikitext_with_reftokens
+        actual = get_sents_refs.collect_refs(self.wikitext)[1]
+        self.assertEqual(expect, actual
         )
 
     def test_urls_list(self):
@@ -878,6 +892,42 @@ class TestWikitextFile(unittest.TestCase):
         expect = u'   [[something else]]   '
         actual = get_sents_refs.clean_wikitext(wikitext)
         self.assertEqual(expect, actual)
+
+
+class TestAllRefUrls(unittest.TestCase):
+
+    def test_basic(self):
+        wikitext = '<ref>http://www.excelsior.com.mx/2013/02/01/nacional/882114</ref>'
+        expected_refs = {
+            'coeref0': [
+                'http://www.excelsior.com.mx/2013/02/01/nacional/882114',
+            ]
+        }
+        actual, __ = get_sents_refs.collect_refs(wikitext)
+        self.assertItemsEqual(expected_refs, actual)
+
+    def test_extract_urls_from_ref(self):
+        reftext = '[http://www.milenio.com/cdb/doc/noticias2011/bbebbb8a6449c0ec124e523f92db4102. Todos los lesionados fueron al Hospital Central de Pemex: Segob]'
+        expected_urls = ['http://www.milenio.com/cdb/doc/noticias2011/bbebbb8a6449c0ec124e523f92db4102']
+        actual = get_sents_refs.extract_urls_from_ref(reftext)
+        self.assertEqual(expected_urls, actual)
+
+    def test_collect_refs(self):
+        wikitext = u'El edificio fue desalojado totalmente en los minutos subsecuentes de la explosión, se han confirmado 37 decesos y 126 lesionados.<ref>[http://www.milenio.com/cdb/doc/noticias2011/bbebbb8a6449c0ec124e523f92db4102. Todos los lesionados fueron al Hospital Central de Pemex: Segob]</ref><ref>http://www.eluniversal.com.mx/notas/899908.html</ref> Muchos testigos afirmaron que el edificio se "cimbró" debido a la magnitud de la explosión.<ref>http://www.excelsior.com.mx/2013/02/01/nacional/882177</ref>'
+        expected_refs = {
+            'coeref0': [
+                'http://www.milenio.com/cdb/doc/noticias2011/bbebbb8a6449c0ec124e523f92db4102'
+            ],
+            'coeref1': [
+                'http://www.eluniversal.com.mx/notas/899908.html',
+            ],
+            'coeref2': [
+                'http://www.excelsior.com.mx/2013/02/01/nacional/882177',
+            ]
+        }
+        actual, __ = get_sents_refs.collect_refs(wikitext)
+        print(actual)
+        self.assertEqual(expected_refs, actual)
 
 
 if __name__ == '__main__':
