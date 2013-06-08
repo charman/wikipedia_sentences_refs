@@ -1,5 +1,4 @@
 # -*- encoding: utf-8 -*-
-from __future__ import print_function
 import sys
 from subprocess import Popen, PIPE
 import nltk  # for now.

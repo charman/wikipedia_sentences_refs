@@ -30,18 +30,19 @@ NOTE:
 import os, os.path, string, sys
 import StringIO
 
-#from sbd import SVM_Model, NB_Model
-
 models = {}
 
 def tokenize(text, tokenize=False,
              splitta_dir=os.path.join(os.getcwd(), "lib/splitta/"),
              model_path="model_nb", verbose=False):
-    # Use model_nb (Naive Bayes) not SVM by default, since SVM requires svmlight (licensing restrictions)
+    # Use model_nb (Naive Bayes) not SVM by default, since SVM requires
+    # svmlight (licensing restrictions)
     assert os.path.isdir(splitta_dir)
     if splitta_dir not in sys.path:
         sys.path.append(splitta_dir)
     import sbd      # The splitta module
+    sbd.SVM_CLASSIFY = '/export/apps/bin/svm_classify'
+    sbd.SVM_LEARN = '/export/apps/bin/svm_learn'
 
     oldwd = os.getcwd()
     assert os.path.isdir(splitta_dir)
@@ -53,14 +54,20 @@ def tokenize(text, tokenize=False,
     # Cache model so it need not be repeatedly reloaded.
     if model_path not in models:
         # Load the model, it is not cached
-        if 'svm' in model_path: svm = True
-        else: svm = False
+        if 'svm' in model_path:
+            svm = True
+        else:
+            svm = False
         models[model_path] = sbd.load_sbd_model(model_path, svm)
     model = models[model_path]
 
     test = sbd.get_data([StringIO.StringIO(text)], tokenize=True, files_already_opened=True)
     test.featurize(model, verbose=verbose)
     model.classify(test, verbose=verbose)
+    print(os.getcwd())
+    print(model_path)
+    print(text)
+    print(model)
     output = StringIO.StringIO()
     test.segment(use_preds=True, tokenize=tokenize, output=output)
 

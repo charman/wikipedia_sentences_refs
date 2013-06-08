@@ -509,7 +509,6 @@ def main(argv):
     # Print a list of sentences, each with all its associated URLs separated
     # by tabs.
     result_string = '\n'.join(unicode(line) for line in line_urls)
-
     return result_string
 
 if __name__ == '__main__':
