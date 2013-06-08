@@ -23,7 +23,8 @@ import mwparserfromhell
 import sanitize_html
 
 ENGLISH_LANG = 'en'
-REFTOKEN_RE = re.compile('coeref\d+')
+REFTOKEN_RE = re.compile(r'coeref\d+')
+GRUBER_URLINTEXT_PAT = re.compile(ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))')
 
 
 class LineWithRefs(object):
@@ -124,6 +125,12 @@ def clean_wikitext(wikitext):
         wikitext,
         flags=re.UNICODE | re.MULTILINE
     )
+    wikitext = re.sub(
+        r'\[\[(File|Archivo):.*?\]\]',
+        r'',
+        wikitext,
+        flags=re.UNICODE | re.MULTILINE
+    )
     wikitext = fixup_named_refs(wikitext)
     wikitext = sanitize_html.safe_html(wikitext)
     return wikitext
@@ -215,7 +222,7 @@ def fixup_named_refs(wikitext):
     repl = r'<ref name="\1" />'
     return named_openclose_reftag_re.sub(repl, wikitext)
 
-def collect_refs(wikitext):
+def collect_refs(wikitext, cit_url_attibutes_only=False):
     """
     Finds all the citations within named and unnamed <ref></ref> and <ref />
     tags, returns a copy of the wikitext with the reftag spans replaced with
@@ -239,7 +246,10 @@ def collect_refs(wikitext):
     for ref in refs:
 
         # Collect all the citations' urls inside the ref tag span.
-        urls = extract_ref_urls_from_wikitext(unicode(ref.string))
+        urls = extract_urls_from_ref(
+            unicode(ref.string),
+            cit_url_attibutes_only
+        )
         name = None
         if 'name' in ref.attrs:
             name = unicode(ref.attrs['name'])
@@ -267,10 +277,17 @@ def collect_refs(wikitext):
     return map_reftoken_to_urls, unicode(soup.get_text())
 
 
-def extract_ref_urls_from_wikitext(wikitext):
+def extract_urls_from_ref(wikitext, cit_url_attibutes_only=False):
     """
-    Parse the wikitext and get all the urls found in cite/Citation templates.
+    Parse the wikitext and get all the urls found
+    set cit_url_attibutes_only=True to only capture urls in cite/Citation
+    templates.
     """
+    if not cit_url_attibutes_only:
+        return [
+            mgroups[0] for mgroups in GRUBER_URLINTEXT_PAT.findall(wikitext)
+        ]
+
     wikicode = mwparserfromhell.parse(wikitext)
     url_templates = wikicode.filter_templates(
         recursive=True,
@@ -493,8 +510,6 @@ def main(argv):
     # by tabs.
     result_string = '\n'.join(unicode(line) for line in line_urls)
 
-    #print(strip_wikitext_markup(wikitext_with_reftokens))
-    print(split_sentences(strip_wikitext_markup(wikitext)))
     return result_string
 
 if __name__ == '__main__':
