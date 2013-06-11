@@ -520,32 +520,20 @@ def main(argv):
     # Use the split tokens to scan the plain text version that has inserted
     # coeref tokens, and associate ref citation urls with sentences.
 
-    # line_urls = urls_for_lines(
-    #     sentences,
-    #     map_reftoken_to_urls,
-    #     strip_wikitext_markup(wikitext_with_reftokens)
-    # )
-
+    # Merge together each sentence and its URLs.
     line_urls = urls_for_lines(
         split_sentences(strip_wikitext_markup(wikitext)),
         map_reftoken_to_urls,
         strip_wikitext_markup(wikitext_with_reftokens)
     )
 
-    #sentences = split_sentences(strip_wikitext_markup(wikitext))
-
     assert len(sentences) == len(line_urls)
 
-    # # Merge together each sentence and its URLs.
-    # sentences_and_refurls = prune_lines(
-    #     [line.sentence] + line.urls
-    #     for line in line_urls
-    # )
-
-    # sentences_and_refurls = [
-    #     [line.sentence] + line.urls
-    #     for line in line_urls
-    # ]
+    write_log_file(
+        args.logdir,
+        title + '.urls.log',
+        '\n'.join('\t'.join(line.urls) for line in line_urls)
+    )
 
     # Print a list of sentences, each with all its associated URLs separated
     # by tabs.
