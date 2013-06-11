@@ -10,8 +10,11 @@
 #   ./get_sents_refs.py --help
 
 import argparse
+import codecs
 import json
+import os
 import re
+import shutil
 import sys
 import urllib
 import wiki2plain
@@ -21,6 +24,7 @@ from bs4 import BeautifulSoup
 from string_scanner.scanner import Scanner
 import mwparserfromhell
 import sanitize_html
+
 
 ENGLISH_LANG = 'en'
 REFTOKEN_RE = re.compile(r'coeref\d+')
@@ -78,6 +82,12 @@ def _handle_args(argv):
         action='store_true',
         help='the title of the Wikipedia page already has special characters '
              'replaced with the %%xx escape'
+    )
+    parser.add_argument(
+        '--logdir',
+        help='the directory where log files will be created.\n'
+             'BE CAREFUL: using this command will replace the entire supplied '
+             'directory if it already exists.'
     )
     return parser.parse_args(argv[1:])
 
@@ -442,8 +452,21 @@ def strip_wikitext_markup(wikitext):
         ref.replace_with(' ')
     return wiki2plain.Wiki2Plain(unicode(body.text)).text
 
+def create_logdir(logdir):
+    if not os.path.exists(logdir):
+        os.mkdir(logdir)
+
+def write_log_file(logdir, filename, text):
+    if logdir:
+        with codecs.open(os.path.join(logdir, filename),
+                         'w', 'utf-8-sig') as f:
+            f.write(text)
+
 def main(argv):
     args = _handle_args(argv)
+    if args.logdir:
+        create_logdir(args.logdir)
+
     language = args.language
 
     # Make sure this is the non-url-quoted title string.
@@ -464,17 +487,35 @@ def main(argv):
 
     # Download the page in wikitext format.
     wikitext = scrape_wikitext(title, language, True)
+    write_log_file(args.logdir, title + '.orig-wikitext.log', wikitext)
+
     # Since the result will be tab-separated text, remove all tabs from the
     # source.
     wikitext = clean_wikitext(wikitext)
+    write_log_file(args.logdir, title + '.clean-wikitext.log', wikitext)
 
     # Render a text-only representation of the page and sentence-split it.
     sentences = split_sentences(strip_wikitext_markup(wikitext))
+    write_log_file(
+        args.logdir,
+        title + '.sentences.log',
+        '\n'.join(sentences) + '\n'
+    )
 
     # Scan through the wikitext, collecting a map of (named and unnamed) refs
     # to urls, while also replacing each ref span with a token like
     # coeref0 coeref1 etc. Then use wiki2plain again on this version.
     map_reftoken_to_urls, wikitext_with_reftokens = collect_refs(wikitext)
+    write_log_file(
+        args.logdir,
+        title + '.map_reftoken_to_urls.log',
+        json.dumps(map_reftoken_to_urls)
+    )
+    write_log_file(
+        args.logdir,
+        title + '.wikitext_with_reftokens.log',
+        wikitext_with_reftokens
+    )
 
     # Use the split tokens to scan the plain text version that has inserted
     # coeref tokens, and associate ref citation urls with sentences.
@@ -513,5 +554,5 @@ def main(argv):
     return result_string
 
 if __name__ == '__main__':
-    result = main(sys.argv).encode('utf-8')
-    print(result)
+    result = main(sys.argv)
+    print(result.encode('utf-8'))
