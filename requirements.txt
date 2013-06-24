@@ -5,3 +5,4 @@ https://github.com/callison-burch/wpTextExtractor/zipball/master
 https://github.com/callison-burch/wikipydia/zipball/master
 mwparserfromhell
 mwclient
+https://github.com/lukeorland/python-string-scanner/zipball/package
