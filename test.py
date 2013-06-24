@@ -4,7 +4,7 @@ import re
 import unittest
 import sys
 from bs4 import BeautifulSoup
-from string_scanner.scanner import Scanner
+from scanner import Scanner
 #from ddt import ddt, data
 import wiki2plain
 

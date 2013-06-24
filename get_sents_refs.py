@@ -21,7 +21,7 @@ import wiki2plain
 import lxml.etree
 import nltk  # for now.
 from bs4 import BeautifulSoup
-from string_scanner.scanner import Scanner
+from scanner import Scanner
 import mwparserfromhell
 import sanitize_html
 
