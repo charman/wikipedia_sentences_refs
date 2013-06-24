@@ -1,3 +1,0 @@
-[submodule "lib/python-string-scanner"]
-	path = lib/python-string-scanner
-	url = git@github.com:markwatkinson/python-string-scanner.git
