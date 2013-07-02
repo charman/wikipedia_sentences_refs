@@ -127,20 +127,42 @@ def fix_paragraph_boundaries(wikitext):
     return re.sub('\n\n+', '\n\n', wikitext, flags=re.MULTILINE)
 
 def clean_wikitext(wikitext):
-    wikitext = wikitext.replace('\t', ' ')
-    wikitext = wikitext.replace('&nbsp;', ' ')
-    wikitext = re.sub(
-        r'\n\s*\n+',
-        r'\n\n',
-        wikitext,
-        flags=re.UNICODE | re.MULTILINE
-    )
+    """
+    Preserve the wikitext markup, but remove certain characters that we don't
+    want during parsing.
+
+    * Replace tab characters with a single space character.
+    * Replace non-blocking space string representation with a single space
+      character.
+    * Strip initial and final whitespace on all lines
+    * Fix the number of consecutive newline characters to 2
+    * [[File: ]] and similar markup. TODO: move this into strip_wikitext_markup
+    * prep the file to be parsed by an html parser.
+    """
     wikitext = re.sub(
         r'\[\[(File|Archivo):.*?\]\]',
         r'',
         wikitext,
         flags=re.UNICODE | re.MULTILINE
     )
+
+    # Replace undesireable characters and strings.
+    wikitext = wikitext.replace('\t', ' ')
+    wikitext = wikitext.replace('&nbsp;', ' ')
+
+    # Strip whitespace from every line.
+    wikitext = '\n'.join(
+        line.strip() for line in wikitext.split('\n')
+    )
+
+    # Fix the number of consecutive newline characters to 2.
+    wikitext = re.sub(
+        r'\n\n+',
+        r'\n\n',
+        wikitext,
+        flags=re.UNICODE | re.MULTILINE
+    )
+
     wikitext = fixup_named_refs(wikitext)
     wikitext = sanitize_html.safe_html(wikitext)
     return wikitext
@@ -435,16 +457,9 @@ def prune_lines(sentences_and_refurls):
     return result
 
 def strip_wikitext_markup(wikitext):
-    #wikitext = u"<html><body>%s</body></html>" % wikitext
-    #wikitext = re.sub(r'<(.*?)/>', '', wikitext, re.S | re.MULTILINE)
-    #wikitext = wiki2plain.Wiki2Plain(wikitext).text
-    #soup = BeautifulSoup(wikitext)
-    #body = soup.find_all('body')[0]
-    # for tag_span in body.find_all(name=re.compile(".*")):
-    #     tag_span.replace_with('_')
-    #wikitext = soup.get_text()
-    #wikitext = '\n'.join([text for text in soup.strings])
-    #return wiki2plain.Wiki2Plain(unicode(body.string)).text
+    """
+    Strip away markup elements:
+    """
     body = BeautifulSoup(wikitext).body
     for table in body.find_all('table'):
         table.extract()
