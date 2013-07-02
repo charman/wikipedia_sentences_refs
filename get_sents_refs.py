@@ -17,6 +17,7 @@ import re
 import shutil
 import sys
 import urllib
+import unicodedata
 import wiki2plain
 import lxml.etree
 import nltk  # for now.
@@ -472,6 +473,9 @@ def create_logdir(logdir):
         os.mkdir(logdir)
 
 def write_log_file(logdir, filename, text):
+    filename = unicode(filename)
+    filename = unicodedata.normalize('NFKD', filename).encode('ascii','ignore')
+    filename = re.sub(r'["\'?\s]', '_', filename)
     if logdir:
         with codecs.open(os.path.join(logdir, filename),
                          'w', 'utf-8-sig') as f:
