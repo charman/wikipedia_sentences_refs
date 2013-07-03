@@ -309,7 +309,7 @@ def collect_refs(wikitext, cit_url_attibutes_only=False):
 
         # Create a new reftoken if necessary.
         if not name in map_refnames_to_reftokens.keys():
-            reftoken = 'coeref%s' % reftokens_count
+            reftoken = 'coeref{0:04d}'.format(reftokens_count)
             reftokens_count += 1
             if name:
                 map_refnames_to_reftokens[name] = reftoken
@@ -515,10 +515,6 @@ def strip_wikitext_markup(wikitext):
         ref.replace_with(' ')
     return wiki2plain.Wiki2Plain(unicode(body.text)).text
 
-def create_logdir(logdir):
-    if not os.path.exists(logdir):
-        os.mkdir(logdir)
-
 def write_log_file(logdir, filename, text):
     filename = unicode(filename)
     filename = unicodedata.normalize('NFKD', filename).encode('ascii','ignore')
@@ -530,9 +526,6 @@ def write_log_file(logdir, filename, text):
 
 def main(argv):
     args = _handle_args(argv)
-    if args.logdir:
-        create_logdir(args.logdir)
-
     language = args.language
 
     # Make sure this is the non-url-quoted title string.
@@ -553,12 +546,12 @@ def main(argv):
 
     # Download the page in wikitext format.
     wikitext = scrape_wikitext(title, language, True)
-    write_log_file(args.logdir, title + '.orig-wikitext.log', wikitext)
+    write_log_file(args.logdir, english_title + '.orig-wikitext.log', wikitext)
 
     # Since the result will be tab-separated text, remove all tabs from the
     # source.
     wikitext = clean_wikitext(wikitext)
-    write_log_file(args.logdir, title + '.clean-wikitext.log', wikitext)
+    write_log_file(args.logdir, english_title + '.clean-wikitext.log', wikitext)
 
     # Scan through the wikitext, collecting a map of (named and unnamed) refs
     # to urls, while also replacing each ref span with a token like
@@ -566,12 +559,13 @@ def main(argv):
     map_reftoken_to_urls, wikitext_with_reftokens = collect_refs(wikitext)
     write_log_file(
         args.logdir,
-        title + '.map_reftoken_to_urls.log',
-        json.dumps(map_reftoken_to_urls)
+        english_title + '.map_reftoken_to_urls.log',
+        json.dumps(map_reftoken_to_urls, sort_keys=True, indent=2,
+                   separators=(',', ': '))
     )
     write_log_file(
         args.logdir,
-        title + '.wikitext_with_reftokens.log',
+        english_title + '.wikitext_with_reftokens.log',
         wikitext_with_reftokens
     )
 
@@ -587,7 +581,7 @@ def main(argv):
     sentences = split_sentences(strip_wikitext_markup(wikitext))
     write_log_file(
         args.logdir,
-        title + '.sentences.log',
+        english_title + '.sentences.log',
         '\n'.join(sentences) + '\n'
     )
 
@@ -602,7 +596,7 @@ def main(argv):
 
     write_log_file(
         args.logdir,
-        title + '.urls.log',
+        english_title + '.urls.log',
         '\n'.join('\t'.join(line.urls) for line in line_urls)
     )
 

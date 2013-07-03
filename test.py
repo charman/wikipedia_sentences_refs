@@ -421,15 +421,15 @@ wikitext_Aquamole_Pot_complicated_refs_replaced = u"""{{Infobox cave
 | survey = [http://cavemaps.org/cavePages/West%20Kingsdale__Aquamole%20Pot.htm cavemaps.org]
 }}
 
-'''Aquamole Pot''' is a cave in West [[Kingsdale]], [[North Yorkshire]], England. It was originally explored from below by cave divers who had negotiated {{convert|550|ft|m}} of [[Sump (cave)|sump]] passage from [[Rowten Pot]] in 1974, to discover a high [[Pitch (ascent/descent)|aven]] above the river passage. coeref0 
- coeref1 
+'''Aquamole Pot''' is a cave in West [[Kingsdale]], [[North Yorkshire]], England. It was originally explored from below by cave divers who had negotiated {{convert|550|ft|m}} of [[Sump (cave)|sump]] passage from [[Rowten Pot]] in 1974, to discover a high [[Pitch (ascent/descent)|aven]] above the river passage. coeref0000 
+ coeref0001 
 
 
 ==History==
 
-The {{convert|130|ft|m}} aven was scaled in 1980 using poles, ladders and hand bolting kits, and a radio location transmitter placed at the highest point. Having discovered it was {{convert|180|ft|m}} from, and {{convert|180|ft|m}} below [[Jingling Pot]], the aven was renamed Aquamole Aven instead of Jingling Avens. coeref0  coeref2  
+The {{convert|130|ft|m}} aven was scaled in 1980 using poles, ladders and hand bolting kits, and a radio location transmitter placed at the highest point. Having discovered it was {{convert|180|ft|m}} from, and {{convert|180|ft|m}} below [[Jingling Pot]], the aven was renamed Aquamole Aven instead of Jingling Avens. coeref0000  coeref0002  
 
-Work restarted in 2000 when divers who were keen on a quick route to the sump beyond, rescaled the avens to a higher point, and radio located a position to {{convert|50|ft|m}} below the moor. It was finally connected to the surface in June 2002. coeref0 
+Work restarted in 2000 when divers who were keen on a quick route to the sump beyond, rescaled the avens to a higher point, and radio located a position to {{convert|50|ft|m}} below the moor. It was finally connected to the surface in June 2002. coeref0000 
 
 ==References==
 """
@@ -465,11 +465,15 @@ class TestComplicatedRefs(unittest.TestCase):
 
     def test_collect_refs(self):
         expect = (
-            {u'coeref0': [u'http://www.wildplaces.co.uk/descent/descent168.html',
-                          u'http://www.wildplaces.co.uk/descent/descent170.html'],
-             u'coeref1': [],
-             u'coeref2': [u'http://www.wildplaces.co.uk/descent/descent168.html',
-                          u'http://www.wildplaces.co.uk/descent/descent169.html'],
+            {u'coeref0000': [
+                 u'http://www.wildplaces.co.uk/descent/descent168.html',
+                 u'http://www.wildplaces.co.uk/descent/descent170.html'
+             ],
+             u'coeref0001': [],
+             u'coeref0002': [
+                 u'http://www.wildplaces.co.uk/descent/descent168.html',
+                 u'http://www.wildplaces.co.uk/descent/descent169.html'
+             ],
             },
             wikitext_Aquamole_Pot_complicated_refs_replaced
         )
@@ -514,12 +518,12 @@ Work restarted in 2000 when divers who were keen on a quick route to the sump be
         ]
         result = get_sents_refs.urls_for_lines(
             sentences_Aquamole_Pot,
-            {u'coeref0': [
+            {u'coeref0000': [
                     u'http://www.wildplaces.co.uk/descent/descent168.html',
                     u'http://www.wildplaces.co.uk/descent/descent170.html'
                 ],
-             u'coeref1': [],
-             u'coeref2': [
+             u'coeref0001': [],
+             u'coeref0002': [
                     u'http://www.wildplaces.co.uk/descent/descent168.html',
                     u'http://www.wildplaces.co.uk/descent/descent169.html'
                 ],
@@ -751,20 +755,20 @@ class TestSimple(unittest.TestCase):
         ]
 
         wikitext = [
-            u'Foo. coeref0 ',
+            u'Foo. coeref0000 ',
             u'',
-            u'Bar coeref1 baz.',
+            u'Bar coeref0001 baz.',
             u'',
             u"Hello, world. What's up?",
-            u'biz coeref1 ',
-            u' coeref2 bang',
+            u'biz coeref0001 ',
+            u' coeref0002 bang',
         ]
         self.wikitext_with_reftokens = u'\n'.join(wikitext) + '\n'
 
         self.expected_map_reftoken_to_urls = {
-            'coeref0': [u'testurl0'],
-            'coeref1': [u'testurl0', u'testurl3'],
-            'coeref2': [u'testurl1'],
+            'coeref0000': [u'testurl0'],
+            'coeref0001': [u'testurl0', u'testurl3'],
+            'coeref0002': [u'testurl1'],
         }
 
         self.expected_urls_list = [
@@ -835,7 +839,7 @@ class TestAMP(unittest.TestCase):
 
     def test(self):
         mapping = {
-            'coeref0': [u'http://www.wildplaces.co.uk/descent/descent168.html']
+            'coeref0000': [u'http://www.wildplaces.co.uk/descent/descent168.html']
         }
 
         wikitext_with_refs = """[[Category:Wikipedia cave articles with unreferenced coordinates|Aquamole Pot]]
@@ -846,7 +850,10 @@ class TestAMP(unittest.TestCase):
 
 The 130 feet (40 m) aven was scaled in 1980 using poles, ladders and hand bolting kits, and a radio location transmitter placed at the highest point. Having discovered it was 180 feet (55 m) from, and 180 feet (55 m) below [[Jingling Pot]], the aven was renamed Aquamole Aven instead of Jingling Avens.
 
-Work restarted in 2000 when divers who were keen on a quick route to the sump beyond, rescaled the avens to a higher point, and radio located a position to 50 feet (15 m) below the moor. It was finally connected to the surface in June 2002. coeref0
+Work restarted in 2000 when divers who were keen on a quick route to the sump
+beyond, rescaled the avens to a higher point, and radio located a position to
+50 feet (15 m) below the moor. It was finally connected to the surface in June
+2002. coeref0000
 
 ==References==
 
@@ -866,7 +873,7 @@ Work restarted in 2000 when divers who were keen on a quick route to the sump be
             '',
         ]
         map_reftoken_to_urls = {
-            'coeref0': ['http://www.wildplaces.co.uk/descent/descent168.html']
+            'coeref0000': ['http://www.wildplaces.co.uk/descent/descent168.html']
         }
 
         result = get_sents_refs.urls_for_lines(
@@ -902,20 +909,22 @@ Work restarted in 2000 when divers who were keen on a quick route to the sump be
 class TestWikitextFile(unittest.TestCase):
 
     def test_remove_file_span_en(self):
+        """The clean_wikitext method should not remove File/Archivo tags"""
         wikitext = (
             ' [[File:Torre Pemex (5).jpg|thumb|right|250px|Torre Pemex at '
             'night]] [[something else]]'
         )
-        expect = u'   [[something else]]   '
+        expect = u'[[File:Torre Pemex (5).jpg|thumb|right|250px|Torre Pemex at night]] [[something else]]'
         actual = get_sents_refs.clean_wikitext(wikitext)
         self.assertEqual(expect, actual)
 
     def test_remove_file_span_es(self):
+        """The clean_wikitext method should not remove File/Archivo tags"""
         wikitext = (
             ' [[Archivo:Torre Pemex (5).jpg|thumb|right|250px|Torre Pemex at '
             'night]] [[something else]]'
         )
-        expect = u'   [[something else]]   '
+        expect = u'[[Archivo:Torre Pemex (5).jpg|thumb|right|250px|Torre Pemex at night]] [[something else]]'
         actual = get_sents_refs.clean_wikitext(wikitext)
         self.assertEqual(expect, actual)
 
@@ -925,7 +934,7 @@ class TestAllRefUrls(unittest.TestCase):
     def test_basic(self):
         wikitext = '<ref>http://www.excelsior.com.mx/2013/02/01/nacional/882114</ref>'
         expected_refs = {
-            'coeref0': [
+            'coeref0000': [
                 'http://www.excelsior.com.mx/2013/02/01/nacional/882114',
             ]
         }
@@ -941,13 +950,13 @@ class TestAllRefUrls(unittest.TestCase):
     def test_collect_refs(self):
         wikitext = u'El edificio fue desalojado totalmente en los minutos subsecuentes de la explosión, se han confirmado 37 decesos y 126 lesionados.<ref>[http://www.milenio.com/cdb/doc/noticias2011/bbebbb8a6449c0ec124e523f92db4102. Todos los lesionados fueron al Hospital Central de Pemex: Segob]</ref><ref>http://www.eluniversal.com.mx/notas/899908.html</ref> Muchos testigos afirmaron que el edificio se "cimbró" debido a la magnitud de la explosión.<ref>http://www.excelsior.com.mx/2013/02/01/nacional/882177</ref>'
         expected_refs = {
-            'coeref0': [
+            'coeref0000': [
                 'http://www.milenio.com/cdb/doc/noticias2011/bbebbb8a6449c0ec124e523f92db4102'
             ],
-            'coeref1': [
+            'coeref0001': [
                 'http://www.eluniversal.com.mx/notas/899908.html',
             ],
-            'coeref2': [
+            'coeref0002': [
                 'http://www.excelsior.com.mx/2013/02/01/nacional/882177',
             ]
         }
@@ -982,8 +991,8 @@ class TestSimpleUrlsForLines(unittest.TestCase):
     def setUp(self):
         self.line_urls = get_sents_refs.urls_for_lines(
             ['a'],
-            {'coeref0': ['url0']},
-            'a coeref0',
+            {'coeref0000': ['url0']},
+            'a coeref0000',
         )
 
     def test_len(self):
