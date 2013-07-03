@@ -350,6 +350,10 @@ def urls_for_lines(sentences, map_reftoken_to_urls, plain_text_with_reftokens):
     """
     Creates a list of lists. Each inner list is the list of URLs corresponding
     to the referenced citations for each line in the ``sentences`` argument.
+
+    After sentence splitting and tokenization, use the split tokens to scan the
+    plain text version that has inserted coeref tokens, and associate ref
+    citation urls with sentences.
     """
     result = []
 
