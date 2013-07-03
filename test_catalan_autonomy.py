@@ -6,12 +6,19 @@ import get_sents_refs
 class Test1(unittest.TestCase):
 
     def setUp(self):
-        fn = 'resources/Manifestacion__Som_una_nacio._Nosaltres_decidim_.orig-wikitext.log'
+        fn = 'resources/2010_Catalan_autonomy_protest.es.orig-wikitext.log'
         with open(fn) as f:
-            self.wikitext = f.read().decode('utf-8')
+            self.wikitext_es = f.read().decode('utf-8')
 
-    def test_1(self):
-        self.assertNotEqual('', self.wikitext)
+        fn = 'resources/2010_Catalan_autonomy_protest.en.orig-wikitext.log'
+        with open(fn) as f:
+            self.wikitext_en = f.read().decode('utf-8')
+
+    def test_es(self):
+        self.assertNotEqual('', self.wikitext_es)
+
+    def test_en(self):
+        self.assertNotEqual('', self.wikitext_en)
 
 
 class TestStripWikitext(unittest.TestCase):
