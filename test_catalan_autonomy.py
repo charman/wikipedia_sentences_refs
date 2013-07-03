@@ -20,6 +20,13 @@ class Test1(unittest.TestCase):
     def test_en(self):
         self.assertNotEqual('', self.wikitext_en)
 
+    def test_url_extraction(self):
+        wikitext = self.wikitext_es
+        map_reftoken_to_urls, __ = get_sents_refs.collect_refs(wikitext)
+        expect = u"http://www.3cat24.cat/especial/211/altres/El-TC-dicta-sentencia-per-lEstatut"
+        actual = map_reftoken_to_urls["coeref0000"][0]
+        self.assertEqual(expect, actual)
+
 
 class TestStripWikitext(unittest.TestCase):
 

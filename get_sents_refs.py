@@ -334,7 +334,10 @@ def extract_urls_from_ref(wikitext, cit_url_attibutes_only=False):
     """
     if not cit_url_attibutes_only:
         return [
-            mgroups[0] for mgroups in GRUBER_URLINTEXT_PAT.findall(wikitext)
+            # Urls are being returned with '|.*' following the url,
+            # so strip that away.
+            mgroups[0].split('|')[0]
+            for mgroups in GRUBER_URLINTEXT_PAT.findall(wikitext)
         ]
 
     wikicode = mwparserfromhell.parse(wikitext)
@@ -348,7 +351,9 @@ def extract_urls_from_ref(wikitext, cit_url_attibutes_only=False):
             matched_url = re.match(r'\s*url\s*=\s*(\S+)\s*', unicode(ut.get('url')))
             if matched_url:
                 url = matched_url.groups(1)[0]
-                #result.append(ut.get('url').split('=')[-1].strip())
+                # Urls are being returned with '|.*' following the url,
+                # so strip that away.
+                url = url.split('|')[0]
                 result.append(url)
     return list(set(result))
 
