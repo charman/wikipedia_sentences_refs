@@ -234,17 +234,27 @@ def split_sentences(text, lang=ENGLISH_LANG):
 
     # Don't ignore blank lines.
     result = []
-    lines = text.split('\n')
-
-    for line in lines:
-        if line.strip().strip('=').strip() == 'References':
-            break
-
-        result.extend(
-            line.strip().strip('=') for line in sent_detector(line)
-        )
-
+    for line in text.split('\n'):
+        result.extend(sent_detector(line))
     return result
+
+def truncate_lines_after_match(line_re, text):
+    r"""
+    Keep all the lines from the beginning until the first line that matches the
+    regular expression passed in.
+    >>> truncate_lines_after_match('^\s*=*\s*Refs\s*=*\s*$', 'a\nb\n2')
+    'a\nb\n2'
+    >>> truncate_lines_after_match('^\s*=*\s*Refs\s*=*\s*$', 'a\n = Refs = \n2')
+    'a'
+    >>> truncate_lines_after_match('^\s*=*\s*Refs\s*=*\s*$', 'a\n=Refs=\n2')
+    'a'
+    """
+    result = []
+    for line in text.split('\n'):
+        if re.match(line_re, line):
+            break
+        result.append(line)
+    return '\n'.join(result)
 
 def fixup_named_refs(wikitext):
     """
@@ -461,6 +471,13 @@ def strip_wikitext_markup(wikitext):
     """
     Strip away markup elements:
     """
+
+    # Strip ==Section Heading== markup
+    wikitext = '\n'.join(
+        line.strip().strip('=').strip() for line in wikitext.split('\n')
+    )
+
+    # Strip other markup
     body = BeautifulSoup(wikitext).body
     for table in body.find_all('table'):
         table.extract()
@@ -513,14 +530,6 @@ def main(argv):
     wikitext = clean_wikitext(wikitext)
     write_log_file(args.logdir, title + '.clean-wikitext.log', wikitext)
 
-    # Render a text-only representation of the page and sentence-split it.
-    sentences = split_sentences(strip_wikitext_markup(wikitext))
-    write_log_file(
-        args.logdir,
-        title + '.sentences.log',
-        '\n'.join(sentences) + '\n'
-    )
-
     # Scan through the wikitext, collecting a map of (named and unnamed) refs
     # to urls, while also replacing each ref span with a token like
     # coeref0 coeref1 etc. Then use wiki2plain again on this version.
@@ -536,12 +545,25 @@ def main(argv):
         wikitext_with_reftokens
     )
 
-    # Use the split tokens to scan the plain text version that has inserted
-    # coeref tokens, and associate ref citation urls with sentences.
+    # Ignore everything starting with the =References= heading
+    trunc_aft_refs = lambda x: truncate_lines_after_match(
+        r'^\s*=*\s*References\s*=*\s*$',
+        x
+    )
+    wikitext = trunc_aft_refs(wikitext)
+    wikitext_with_reftokens = trunc_aft_refs(wikitext_with_reftokens)
+
+    # Render a text-only representation of the page and sentence-split it.
+    sentences = split_sentences(strip_wikitext_markup(wikitext))
+    write_log_file(
+        args.logdir,
+        title + '.sentences.log',
+        '\n'.join(sentences) + '\n'
+    )
 
     # Merge together each sentence and its URLs.
     line_urls = urls_for_lines(
-        split_sentences(strip_wikitext_markup(wikitext)),
+        sentences,
         map_reftoken_to_urls,
         strip_wikitext_markup(wikitext_with_reftokens)
     )

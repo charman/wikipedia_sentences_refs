@@ -484,9 +484,9 @@ class TestComplicatedRefs(unittest.TestCase):
     def test_strip_wikitext_markup(self):
         expect = """Aquamole Pot is a cave in West Kingsdale, North Yorkshire, England. It was originally explored from below by cave divers who had negotiated 550 feet (170 m) of sump passage from Rowten Pot in 1974, to discover a high aven above the river passage.
 
-==History==
+History
 The 130 feet (40 m) aven was scaled in 1980 using poles, ladders and hand bolting kits, and a radio location transmitter placed at the highest point.  Having discovered it was 180 feet (55 m) from, and 180 feet (55 m) below Jingling Pot, the aven was renamed Aquamole Aven instead of Jingling Avens.
- 
+
 Work restarted in 2000 when divers who were keen on a quick route to the sump beyond, rescaled the avens to a higher point, and radio located a position to 50 feet (15 m) below the moor.  It was finally connected to the surface in June 2002.""".decode('utf-8').split('\n')[:3]
         actual = get_sents_refs.strip_wikitext_markup(
             wikitext_Aquamole_Pot_expanded_templates
@@ -677,8 +677,8 @@ class TestSpanish(unittest.TestCase):
 
 class TestAquamolePotSentences(unittest.TestCase):
 
-    def test_sentences(self):
-        expect = [
+    def setUp(self):
+        self.text_no_References = [
             u'Aquamole Pot is a cave in West Kingsdale, North Yorkshire, England.',
             u'It was originally explored from below by cave divers who had negotiated 550 feet (170 m) of sump passage from Rowten Pot in 1974, to discover a high aven above the river passage.',
             u'',
@@ -689,15 +689,41 @@ class TestAquamolePotSentences(unittest.TestCase):
             u'',
             u'Work restarted in 2000 when divers who were keen on a quick route to the sump beyond, rescaled the avens to a higher point, and radio located a position to 50 feet (15 m) below the moor.',
             u'It was finally connected to the surface in June 2002.',
-            u'',
         ]
+
+
+    def test_sentences(self):
+        expect = self.text_no_References
         actual = get_sents_refs.split_sentences(
             get_sents_refs.strip_wikitext_markup(
-                wikitext_Aquamole_Pot_expanded_templates
+                get_sents_refs.truncate_lines_after_match(
+                    r'^\s*=*\s*References\s*=*\s*$',
+                    get_sents_refs.clean_wikitext(
+                        wikitext_Aquamole_Pot_expanded_templates
+                    )
+                )
             )
         )
         self.assertEqual(expect, actual)
 
+    def test_nltk_split_123(self):
+        text = u'1. 2. 3.'
+        expect = [
+            u'1.',
+            u'2.',
+            u'3.',
+        ]
+        actual = get_sents_refs.split_sentences(text)
+        self.assertEqual(expect, actual)
+
+    def test_nltk_split_AMP(self):
+        text = u'Aquamole Pot is a cave in West Kingsdale, North Yorkshire, England. It was originally explored from below by cave divers who had negotiated  of sump passage from Rowten Pot in 1974, to discover a high aven above the river passage.'
+        expect = [
+            u'Aquamole Pot is a cave in West Kingsdale, North Yorkshire, England.',
+            u'It was originally explored from below by cave divers who had negotiated  of sump passage from Rowten Pot in 1974, to discover a high aven above the river passage.',
+        ]
+        actual = get_sents_refs.split_sentences(text)
+        self.assertEqual(expect, actual)
 
 class TestSimple(unittest.TestCase):
 
@@ -928,6 +954,27 @@ class TestAllRefUrls(unittest.TestCase):
         actual, __ = get_sents_refs.collect_refs(wikitext)
         print(actual)
         self.assertEqual(expected_refs, actual)
+
+
+class TestStripWikitext(unittest.TestCase):
+
+    def test_simple(self):
+        """
+        should remove == markup from section headers
+        """
+        self.assertEqual(
+            'Refs',
+            get_sents_refs.strip_wikitext_markup('==Refs==')
+        )
+
+    def test_last_newline_disappears(self):
+        """
+        should remove == markup from section headers
+        """
+        self.assertEqual(
+            'last line',
+            get_sents_refs.strip_wikitext_markup('last line\n')
+        )
 
 
 if __name__ == '__main__':
