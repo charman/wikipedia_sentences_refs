@@ -150,19 +150,13 @@ def clean_wikitext(wikitext):
       character.
     * Strip initial and final whitespace on all lines
     * Fix the number of consecutive newline characters to 2
-    * [[File: ]] and similar markup. TODO: move this into strip_wikitext_markup
     * prep the file to be parsed by an html parser.
     """
-    wikitext = re.sub(
-        r'\[\[(File|Archivo):.*?\]\]',
-        r'',
-        wikitext,
-        flags=re.UNICODE | re.MULTILINE
-    )
 
     # Replace undesireable characters and strings.
     wikitext = wikitext.replace('\t', ' ')
     wikitext = wikitext.replace('&nbsp;', ' ')
+    wikitext = sanitize_html.safe_html(wikitext)
 
     # Strip whitespace from every line.
     wikitext = '\n'.join(
@@ -178,7 +172,6 @@ def clean_wikitext(wikitext):
     )
 
     wikitext = fixup_named_refs(wikitext)
-    wikitext = sanitize_html.safe_html(wikitext)
     return wikitext
 
 def redirected_title(english_title):
@@ -505,6 +498,14 @@ def strip_wikitext_markup(wikitext):
     wikitext = '\n'.join(
         line.strip().strip('=').strip() for line in wikitext.split('\n')
     )
+
+    # # Strip [[File: ]] and similar markup.
+    # wikitext = re.sub(
+    #     r'\[\[(File|Archivo):.*?\]\]',
+    #     r'',
+    #     wikitext,
+    #     flags=re.UNICODE | re.MULTILINE
+    # )
 
     # Strip other markup
     body = BeautifulSoup(wikitext).body
