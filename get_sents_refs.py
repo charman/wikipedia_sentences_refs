@@ -154,6 +154,7 @@ def clean_wikitext(wikitext):
     """
 
     # Replace undesireable characters and strings.
+    wikitext = wikitext.replace(u'\ufeff', '')
     wikitext = wikitext.replace('\t', ' ')
     wikitext = wikitext.replace('&nbsp;', ' ')
     wikitext = sanitize_html.safe_html(wikitext)
