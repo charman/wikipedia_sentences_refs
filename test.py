@@ -1001,5 +1001,6 @@ class TestSimpleUrlsForLines(unittest.TestCase):
         actual = self.line_urls[0].urls
         self.assertEqual(expect, actual)
 
+
 if __name__ == '__main__':
     unittest.main()

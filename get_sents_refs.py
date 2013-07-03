@@ -17,6 +17,7 @@ import re
 import shutil
 import sys
 import urllib
+import urllib2
 import unicodedata
 import wiki2plain
 import lxml.etree
@@ -106,11 +107,23 @@ def scrape_wikitext(title, lang=ENGLISH_LANG, expand_templates=False):
     params["titles"] = "%s" % urllib.quote(title.encode('utf-8'))
     qs = "&".join("%s=%s" % (k, v)  for k, v in params.items())
     url = "http://%s.wikipedia.org/w/api.php?%s" % (lang, qs)
+
+    req = urllib2.Request(url)
+    req.add_header('Charset', 'utf-8')
     try:
-        tree = lxml.etree.parse(urllib.urlopen(url))
+        xml_doc = urllib2.urlopen(req)
     except:
         sys.exit(
             "0ERROR: the '%s' page could not be loaded in the language '%s'." %
+            (title, lang)
+        )
+
+    try:
+        tree = lxml.etree.parse(xml_doc)
+    except:
+        sys.exit(
+            "ERROR: the retrieved XML could not be parsed for page '%s' "
+            "in language %s.\n" %
             (title, lang)
         )
     revs = tree.xpath('//rev')
