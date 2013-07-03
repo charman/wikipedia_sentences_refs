@@ -977,5 +977,29 @@ class TestStripWikitext(unittest.TestCase):
         )
 
 
+class TestSimpleUrlsForLines(unittest.TestCase):
+
+    def setUp(self):
+        self.line_urls = get_sents_refs.urls_for_lines(
+            ['a'],
+            {'coeref0': ['url0']},
+            'a coeref0',
+        )
+
+    def test_len(self):
+        expect = 1
+        actual = len(self.line_urls)
+        self.assertEqual(expect, actual)
+
+    def test_sentence(self):
+        expect = 'a'
+        actual = self.line_urls[0].sentence
+        self.assertEqual(expect, actual)
+
+    def test_url(self):
+        expect = ['url0']
+        actual = self.line_urls[0].urls
+        self.assertEqual(expect, actual)
+
 if __name__ == '__main__':
     unittest.main()

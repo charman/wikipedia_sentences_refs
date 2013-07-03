@@ -373,70 +373,82 @@ def urls_for_lines(sentences, map_reftoken_to_urls, plain_text_with_reftokens):
 
     for sent_number, sentence in enumerate(sentences):
 
+        if sent_number == len(sent_tokens) - 1:
+            # Collect the urls for the last line of text.
+            flattened_urls_list = [
+                url
+                for reftoken in REFTOKEN_RE.findall(scanner.rest())
+                for url in map_reftoken_to_urls[reftoken]
+            ]
+            result.append(LineWithRefs(sentence, flattened_urls_list))
+            continue
+
         if sent_tokens[sent_number] == ['']:
             result.append(LineWithRefs())
             continue
 
-        urls = set()
-
-        # Scan through the plain text, matching the second token in the
-        # sentence through the first token of the following sentence.
-        # Assume there are no refs before the first word in the first sentence.
-        tokens = sent_tokens[sent_number][1:]
-
         # Include the first word of the next sentence (if the next sentence is
         # not empty):
-        if sent_number < len(sent_tokens) - 1 and sent_tokens[sent_number + 1]:
-            if sent_tokens[sent_number + 1] == ['']:
-                tokens.append('\n\s*\n')
-            else:
-                tokens.append(sent_tokens[sent_number + 1][0])
+        else:
 
-        for token_idx, token in enumerate(tokens):
-            #token_re = re.compile(token, re.UNICODE | re.MULTILINE)
-            token_re = re.compile(token, re.UNICODE)
+            # Scan through the plain text, matching the second token in the
+            # sentence through the first token of the following sentence.
+            # Assume there are no refs before the first word in the first sentence.
+            tokens = sent_tokens[sent_number][1:]
 
-            # Get all the text until this token is matched.
-            # Collect the reftokens in this range.
+            urls = set()
 
-            if scanner.check_to(token_re) is None:
-                sys.stderr.write(
-                    (
-                        '\ncan\'t find token "%s".\n' % token_re.pattern
-                    ).encode('utf-8')
-                )
-                continue
-                # sys.exit(
-                #     '\nERROR: can\'t find token "{}". Everything after "{}" '
-                #     'is:\n{}'.format(
-                #         token_re.pattern,
-                #         token_re.pattern,
-                #         scanner.rest().encode('utf-8')
-                #     )
-                # )
+            if sent_tokens[sent_number + 1]:
+                if sent_tokens[sent_number + 1] == ['']:
+                    tokens.append('\n\s*\n')
+                else:
+                    tokens.append(sent_tokens[sent_number + 1][0])
 
-            next_chunk = scanner.scan_to(token_re)
+            for token_idx, token in enumerate(tokens):
+                #token_re = re.compile(token, re.UNICODE | re.MULTILINE)
+                token_re = re.compile(token, re.UNICODE)
 
-            # Move the scanner ahead, and make an assertion.
-            #assert scanner.scan(token_re) is not None
-            scanner.scan(token_re)
-            next_chunk += token
+                # Get all the text until this token is matched.
+                # Collect the reftokens in this range.
 
-            if sent_number == len(sent_tokens) - 1:
-                if token_idx == len(sent_tokens[sent_number]) - 1:
-                    # Handle the remaining text after the final token:
-                    next_chunk += scanner.rest()
-                    assert next_chunk is not None
+                if scanner.check_to(token_re) is None:
+                    sys.stderr.write(
+                        (
+                            '\ncan\'t find token "%s".\n' % token_re.pattern
+                        ).encode('utf-8')
+                    )
+                    continue
+                    # sys.exit(
+                    #     '\nERROR: can\'t find token "{}". Everything after "{}" '
+                    #     'is:\n{}'.format(
+                    #         token_re.pattern,
+                    #         token_re.pattern,
+                    #         scanner.rest().encode('utf-8')
+                    #     )
+                    # )
 
-            # Collect the urls for this line of text.
-            flattened_urls_list = [
-                url
-                for reftoken in REFTOKEN_RE.findall(next_chunk)
-                for url in map_reftoken_to_urls[reftoken]
-            ]
-            urls.update(flattened_urls_list)
+                next_chunk = scanner.scan_to(token_re)
 
-        result.append(LineWithRefs(sentence, urls))
+                # Move the scanner ahead, and make an assertion.
+                #assert scanner.scan(token_re) is not None
+                scanner.scan(token_re)
+                next_chunk += token
+
+                if sent_number == len(sent_tokens) - 1:
+                    if token_idx == len(sent_tokens[sent_number]) - 1:
+                        # Handle the remaining text after the final token:
+                        next_chunk += scanner.rest()
+                        assert next_chunk is not None
+
+                # Collect the urls for this line of text.
+                flattened_urls_list = [
+                    url
+                    for reftoken in REFTOKEN_RE.findall(next_chunk)
+                    for url in map_reftoken_to_urls[reftoken]
+                ]
+                urls.update(flattened_urls_list)
+
+            result.append(LineWithRefs(sentence, urls))
 
     return result
 
