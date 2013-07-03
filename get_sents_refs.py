@@ -534,6 +534,15 @@ def main(argv):
     args = _handle_args(argv)
     language = args.language
 
+    if args.logdir:
+        if not os.path.isdir(args.logdir):
+            sys.stderr.write(
+                (
+                    'ERROR: The logdir "%s" does not exist.\n' % args.logdir
+                ).encode('utf-8')
+            )
+            sys.exit(2)
+
     # Make sure this is the non-url-quoted title string.
     if args.quoted:
         english_title = urllib.unquote(args.english_title)
