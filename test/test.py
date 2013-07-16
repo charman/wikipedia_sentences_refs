@@ -1,8 +1,7 @@
 # -*- encoding: utf-8 -*-
 import unittest
-import get_sents_refs
-from get_sents_refs import re, sys, wiki2plain, BeautifulSoup, Scanner
-#from ddt import ddt, data
+from wikimedia_article_sentences_refs import *
+from wikimedia_article_sentences_refs.lib import _reftokens_for_sentence
 
 def parallel_print(list1, list2):
     list1.extend(["", ""])
@@ -449,7 +448,7 @@ class TestComplicatedRefs(unittest.TestCase):
             wikitext_Aquamole_Pot_complicated_refs_replaced
         )
         map_reftoken_to_urls, wikitext_with_reftokens = \
-            get_sents_refs.collect_refs(
+            collect_refs(
                 wikitext_Aquamole_Pot_complicated_refs
             )
 
@@ -463,48 +462,48 @@ History
 The 130 feet (40 m) aven was scaled in 1980 using poles, ladders and hand bolting kits, and a radio location transmitter placed at the highest point.  Having discovered it was 180 feet (55 m) from, and 180 feet (55 m) below Jingling Pot, the aven was renamed Aquamole Aven instead of Jingling Avens.
 
 Work restarted in 2000 when divers who were keen on a quick route to the sump beyond, rescaled the avens to a higher point, and radio located a position to 50 feet (15 m) below the moor.  It was finally connected to the surface in June 2002.""".decode('utf-8').split('\n')[:3]
-        actual = get_sents_refs.strip_wikitext_markup(
+        actual = strip_wikitext_markup(
             wikitext_Aquamole_Pot_expanded_templates
         ).split('\n')[:3]
         self.assertEqual(expect, actual)
 
-    def test_urls(self):
-        # Note: 'ref 0' consists of:
-        #   ['http://www.wildplaces.co.uk/descent/descent168.html',
-        #    'http://www.wildplaces.co.uk/descent/descent170.html'],
-        expect = [
-            [],
-            [u'http://www.wildplaces.co.uk/descent/descent168.html',
-             u'http://www.wildplaces.co.uk/descent/descent170.html'],
-            [],
-            [],
-            [],
-            [u'http://www.wildplaces.co.uk/descent/descent168.html',
-             u'http://www.wildplaces.co.uk/descent/descent169.html',
-             u'http://www.wildplaces.co.uk/descent/descent170.html'],
-            [],
-            [u'http://www.wildplaces.co.uk/descent/descent168.html',
-             u'http://www.wildplaces.co.uk/descent/descent170.html'],
-            [],
-        ]
-        result = get_sents_refs.urls_for_lines(
-            sentences_Aquamole_Pot,
-            {u'coeref0000': [
-                    u'http://www.wildplaces.co.uk/descent/descent168.html',
-                    u'http://www.wildplaces.co.uk/descent/descent170.html'
-                ],
-             u'coeref0001': [],
-             u'coeref0002': [
-                    u'http://www.wildplaces.co.uk/descent/descent168.html',
-                    u'http://www.wildplaces.co.uk/descent/descent169.html'
-                ],
-            },
-            unicode(wiki2plain.Wiki2Plain(wikitext_Aquamole_Pot_complicated_refs_replaced).text)
-        )
-        actual = [line.urls for line in result]
-        self.assertEqual(len(expect), len(actual))
-        for i in range(len(expect)):
-            self.assertItemsEqual(expect[i], actual[i])
+    # def test_urls(self):
+    #     # Note: 'ref 0' consists of:
+    #     #   ['http://www.wildplaces.co.uk/descent/descent168.html',
+    #     #    'http://www.wildplaces.co.uk/descent/descent170.html'],
+    #     expect = [
+    #         [],
+    #         [u'http://www.wildplaces.co.uk/descent/descent168.html',
+    #          u'http://www.wildplaces.co.uk/descent/descent170.html'],
+    #         [],
+    #         [],
+    #         [],
+    #         [u'http://www.wildplaces.co.uk/descent/descent168.html',
+    #          u'http://www.wildplaces.co.uk/descent/descent169.html',
+    #          u'http://www.wildplaces.co.uk/descent/descent170.html'],
+    #         [],
+    #         [u'http://www.wildplaces.co.uk/descent/descent168.html',
+    #          u'http://www.wildplaces.co.uk/descent/descent170.html'],
+    #         [],
+    #     ]
+    #     result = urls_for_lines(
+    #         sentences_Aquamole_Pot,
+    #         {u'coeref0000': [
+    #                 u'http://www.wildplaces.co.uk/descent/descent168.html',
+    #                 u'http://www.wildplaces.co.uk/descent/descent170.html'
+    #             ],
+    #          u'coeref0001': [],
+    #          u'coeref0002': [
+    #                 u'http://www.wildplaces.co.uk/descent/descent168.html',
+    #                 u'http://www.wildplaces.co.uk/descent/descent169.html'
+    #             ],
+    #         },
+    #         unicode(wiki2plain.Wiki2Plain(wikitext_Aquamole_Pot_complicated_refs_replaced).text)
+    #     )
+    #     actual = [line.urls for line in result]
+    #     self.assertEqual(len(expect), len(actual))
+    #     for i in range(len(expect)):
+    #         self.assertItemsEqual(expect[i], actual[i])
 
 
 class TestFixupWikitext(unittest.TestCase):
@@ -518,7 +517,7 @@ The dossier"""
 
 The dossier"""
 
-        actual = get_sents_refs.fixup_named_refs(bad_wikitext)
+        actual = fixup_named_refs(bad_wikitext)
         self.assertEqual(expect, actual)
 
 
@@ -528,18 +527,18 @@ class TestUrlExtraction(unittest.TestCase):
         wikitext = u'chanting the [[Litany of the Saints]].<ref name="YouTube procession">{{cite AV media | title = Procession and entrance in Conclave | trans_title = | medium = Television production | language = Italian | url = https://www.youtube.com/watch?v=cTtzyr5sBkc | accessdate = 9 April 2013 | date = 12 March 2013 | publisher = Centro Televisivo Vaticano | location = Rome | quote =}}</ref> After taking their places,'
 
         expect = [u'https://www.youtube.com/watch?v=cTtzyr5sBkc']
-        actual = get_sents_refs.extract_urls_from_ref(wikitext, True)
+        actual = extract_urls_from_ref(wikitext, True)
         self.assertEqual(expect, actual)
 
         expect = [u'https://www.youtube.com/watch?v=cTtzyr5sBkc']
-        actual = get_sents_refs.extract_urls_from_ref(wikitext)
+        actual = extract_urls_from_ref(wikitext)
         self.assertEqual(expect, actual)
 
     def test_uncited_and_cited_urls_in_a_ref(self):
         wikitext = u"""unclear,<ref>Willey, David (28 February 2013). [http://www.bbc.co.uk/news/world-europe-21624154 "The day Benedict XVI's papacy ended"], [[BBC News]]. 1 March 2013.</ref> and that many different priorities were at play, making this election difficult to predict.<ref>{{cite web|url=http://www.bbc.co.uk/news/world-europe-21731439 |title=The Vatican: Suspense and intrigue |publisher=BBC |date=1 January 1970 |accessdate=12 March 2013}}</ref> Cardinal [[Cormac Murphy-O'Connor]] remarked laughingly to a BBC presenter that his colleagues have been telling him "Siamo confusi&nbsp;– 'we're confused,'" as there were neither clear blocs nor a front-runner.<ref>{{cite web|last=Ivereigh |first=Austen |url=http://www.osvdailytake.com/2013/03/ivereigh-in-rome-does-cardinal.html |title=OSV Daily Take Blog: Ivereigh in Rome: Does cardinal confusion spell a long conclave? |publisher=Osvdailytake.com |accessdate=12 March 2013}}</ref> blah"""
 
         expect = [u'http://www.bbc.co.uk/news/world-europe-21731439', u'http://www.osvdailytake.com/2013/03/ivereigh-in-rome-does-cardinal.html']
-        actual = get_sents_refs.extract_urls_from_ref(wikitext, True)
+        actual = extract_urls_from_ref(wikitext, True)
         self.assertItemsEqual(expect, actual)
 
         expect = [
@@ -547,38 +546,17 @@ class TestUrlExtraction(unittest.TestCase):
             u'http://www.bbc.co.uk/news/world-europe-21731439',
             u'http://www.osvdailytake.com/2013/03/ivereigh-in-rome-does-cardinal.html'
         ]
-        actual = get_sents_refs.extract_urls_from_ref(wikitext)
+        actual = extract_urls_from_ref(wikitext)
         self.assertItemsEqual(expect, actual)
 
 
 class TestSpanish(unittest.TestCase):
 
-    def test_english_Aquamole_Pot(self):
-        cli_argv = ['get_sents_refs.py', '-l', 'en', 'Aquamole Pot']
-        result = get_sents_refs.main(cli_argv).split('\n')
-        actual = len(result)
-        self.assertTrue(actual > 0)
-
-    def test_spanish_Aquamole_Pot(self):
-        cli_argv = ['get_sents_refs.py', '-l', 'es', 'Aquamole Pot']
-        args = get_sents_refs._handle_args(cli_argv)
-        expect = 'es'
-        actual = args.language
-        self.assertEqual(expect, actual)
-
-    def test_language_en_by_default(self):
-        """If the language option is not specified, it should be english"""
-        cli_argv = ['get_sents_refs.py', 'Aquamole Pot']
-        args = get_sents_refs._handle_args(cli_argv)
-        expect = 'en'
-        actual = args.language
-        self.assertEqual(expect, actual)
-
     def test_title_for_cloud_es(self):
         """If the language option is not specified, it should be english"""
         english_title = 'Cloud'
         lang = 'es'
-        actual = get_sents_refs.translated_title(english_title, lang)
+        actual = translated_title(english_title, lang)
         expect = 'Nube'
         self.assertEqual(expect, actual)
 
@@ -586,44 +564,44 @@ class TestSpanish(unittest.TestCase):
         """If the language option is not specified, it should be english"""
         english_title = u'Death_and_state_funeral_of_Hugo_Ch\xe1vez'
         lang = 'es'
-        actual = get_sents_refs.translated_title(english_title, lang)
+        actual = translated_title(english_title, lang)
         expect = u'Muerte y funeral de Estado de Hugo Ch\xe1vez'
         self.assertEqual(expect, actual)
 
-    def test_es_peru(self):
-        cli_argv = ['get_sents_refs.py', '--quoted', '-l', 'es', '2007_Peru_earthquake']
-        actual = len(get_sents_refs.main(cli_argv).split('\n'))
-        self.assertTrue(actual > 0)
+    # def test_es_peru(self):
+    #     cli_argv = ['py', '--quoted', '-l', 'es', '2007_Peru_earthquake']
+    #     actual = len(main(cli_argv).split('\n'))
+    #     self.assertTrue(actual > 0)
 
     def test_title_change_peru_es(self):
         english_title = u'2007_Peru_earthquake'
         lang = 'es'
-        actual = get_sents_refs.translated_title(english_title, lang)
+        actual = translated_title(english_title, lang)
         expect = u'Terremoto del Per\xfa de 2007'
         self.assertEqual(expect, actual)
 
-    def test_de_2004_Madrid_train_bombings(self):
-        cli_argv = ['get_sents_refs.py', '-l', 'de', '2004_Madrid_train_bombings']
-        actual = len(get_sents_refs.main(cli_argv).split('\n'))
-        self.assertTrue(actual > 0)
+    # def test_de_2004_Madrid_train_bombings(self):
+    #     cli_argv = ['py', '-l', 'de', '2004_Madrid_train_bombings']
+    #     actual = len(main(cli_argv).split('\n'))
+    #     self.assertTrue(actual > 0)
 
-    def test_quoted_arg_en(self):
-        cli_argv = ['get_sents_refs.py', '--quoted', 'Death_and_state_funeral_of_Hugo_Ch%C3%A1vez']
-        actual = len(get_sents_refs.main(cli_argv).split('\n'))
-        self.assertTrue(actual > 0)
+    # def test_quoted_arg_en(self):
+    #     cli_argv = ['py', '--quoted', 'Death_and_state_funeral_of_Hugo_Ch%C3%A1vez']
+    #     actual = len(main(cli_argv).split('\n'))
+    #     self.assertTrue(actual > 0)
 
-    def test_quoted_arg_es(self):
-        cli_argv = ['get_sents_refs.py', '--quoted', '-l', 'es', 'Death_and_state_funeral_of_Hugo_Ch%C3%A1vez']
-        actual = len(get_sents_refs.main(cli_argv).split('\n'))
-        self.assertTrue(actual > 0)
+    # def test_quoted_arg_es(self):
+    #     cli_argv = ['py', '--quoted', '-l', 'es', 'Death_and_state_funeral_of_Hugo_Ch%C3%A1vez']
+    #     actual = len(main(cli_argv).split('\n'))
+    #     self.assertTrue(actual > 0)
 
-    def test_quoted_arg_exception(self):
-        """
-        Incorrectly omitting the --quoted option will cause an exception on
-        pages like this.
-        """
-        cli_argv = ['get_sents_refs.py', '-l', 'es', 'Death_and_state_funeral_of_Hugo_Ch%C3%A1vez']
-        self.assertRaises(SystemExit, get_sents_refs.main, cli_argv)
+    # def test_quoted_arg_exception(self):
+    #     """
+    #     Incorrectly omitting the --quoted option will cause an exception on
+    #     pages like this.
+    #     """
+    #     cli_argv = ['py', '-l', 'es', 'Death_and_state_funeral_of_Hugo_Ch%C3%A1vez']
+    #     self.assertRaises(SystemExit, main, cli_argv)
 
     def test_normalize_title_en(self):
         """
@@ -633,7 +611,7 @@ class TestSpanish(unittest.TestCase):
         title = u'Cellulose_plant_conflict_between_Argentina_and_Uruguay'
 
         expect = u'Uruguay River pulp mill dispute'
-        actual = get_sents_refs.redirected_title(title)
+        actual = redirected_title(title)
 
         self.assertEqual(expect, actual)
 
@@ -645,7 +623,7 @@ class TestSpanish(unittest.TestCase):
         title = 'fiancé'.decode('utf-8')
 
         expect = u'Engagement'
-        actual = get_sents_refs.redirected_title(title)
+        actual = redirected_title(title)
 
         self.assertEqual(expect, actual)
 
@@ -669,11 +647,11 @@ class TestAquamolePotSentences(unittest.TestCase):
 
     def test_sentences(self):
         expect = self.text_no_References
-        actual = get_sents_refs.split_sentences(
-            get_sents_refs.strip_wikitext_markup(
-                get_sents_refs.truncate_lines_after_match(
+        actual = split_sentences(
+            strip_wikitext_markup(
+                truncate_lines_after_match(
                     r'^\s*=*\s*References\s*=*\s*$',
-                    get_sents_refs.clean_wikitext(
+                    clean_wikitext(
                         wikitext_Aquamole_Pot_expanded_templates
                     )
                 )
@@ -688,7 +666,7 @@ class TestAquamolePotSentences(unittest.TestCase):
             u'2.',
             u'3.',
         ]
-        actual = get_sents_refs.split_sentences(text)
+        actual = split_sentences(text)
         self.assertEqual(expect, actual)
 
     def test_nltk_split_AMP(self):
@@ -697,7 +675,7 @@ class TestAquamolePotSentences(unittest.TestCase):
             u'Aquamole Pot is a cave in West Kingsdale, North Yorkshire, England.',
             u'It was originally explored from below by cave divers who had negotiated  of sump passage from Rowten Pot in 1974, to discover a high aven above the river passage.',
         ]
-        actual = get_sents_refs.split_sentences(text)
+        actual = split_sentences(text)
         self.assertEqual(expect, actual)
 
 
@@ -781,7 +759,7 @@ class TestSimple(unittest.TestCase):
 
         # 1st sentence
         expect = ['coeref0000']
-        actual = get_sents_refs._reftokens_for_sentence(
+        actual = _reftokens_for_sentence(
             0,
             self.sentences,
             scanner
@@ -795,7 +773,7 @@ class TestSimple(unittest.TestCase):
 
         # 2nd sentence
         expect = []
-        actual = get_sents_refs._reftokens_for_sentence(
+        actual = _reftokens_for_sentence(
             1,
             self.sentences,
             scanner
@@ -809,7 +787,7 @@ class TestSimple(unittest.TestCase):
 
         # 3rd sentence
         expect = ['coeref0001']
-        actual = get_sents_refs._reftokens_for_sentence(
+        actual = _reftokens_for_sentence(
             2,
             self.sentences,
             scanner
@@ -824,7 +802,7 @@ class TestSimple(unittest.TestCase):
         # 4th, 5th, 6th sentences
         expect = []
         for i in [3, 4, 5]:
-            actual = get_sents_refs._reftokens_for_sentence(
+            actual = _reftokens_for_sentence(
                 i,
                 self.sentences,
                 scanner
@@ -838,7 +816,7 @@ class TestSimple(unittest.TestCase):
 
         # 7th sentence
         expect = [u'coeref0001', u'coeref0002', u'coeref0003']
-        actual = get_sents_refs._reftokens_for_sentence(
+        actual = _reftokens_for_sentence(
             6,
             self.sentences,
             scanner
@@ -852,7 +830,7 @@ class TestSimple(unittest.TestCase):
 
         # 8th sentence
         expect = []
-        actual = get_sents_refs._reftokens_for_sentence(
+        actual = _reftokens_for_sentence(
             7,
             self.sentences,
             scanner
@@ -864,19 +842,19 @@ class TestSimple(unittest.TestCase):
     def test_map_reftoken_to_urls(self):
         self.assertItemsEqual(
             self.expected_map_reftoken_to_urls,
-            get_sents_refs.collect_refs(self.wikitext, True)[0]
+            collect_refs(self.wikitext, True)[0]
         )
 
     def test_wikitext_with_reftokens(self):
         expect = self.wikitext_with_reftokens
-        actual = get_sents_refs.collect_refs(self.wikitext)[1]
+        actual = collect_refs(self.wikitext)[1]
         self.assertEqual(expect, actual
         )
 
     def test_reftokens_list(self):
         expect = self.expected_reftokens_list
         expect = map(sorted, expect)
-        actual = get_sents_refs.reftokens_for_sentences(
+        actual = reftokens_for_sentences(
             self.sentences,
             self.wikitext_with_reftokens
         )
@@ -887,7 +865,7 @@ class TestSimple(unittest.TestCase):
         expect = self.expected_urls_list
         expect = map(sorted, expect)
         actual = [
-            get_sents_refs.urls_from_reftokens(
+            urls_from_reftokens(
                 line,
                 self.expected_map_reftoken_to_urls
             )
@@ -917,7 +895,7 @@ class TestFixParagraphBoundaries(unittest.TestCase):
             '4', '',
         ]) + '\n'
 
-        actual = get_sents_refs.fix_paragraph_boundaries(wikitext)
+        actual = fix_paragraph_boundaries(wikitext)
 
         self.assertEqual(expect, actual)
 
@@ -964,10 +942,10 @@ beyond, rescaled the avens to a higher point, and radio located a position to
         }
 
         result = [
-            get_sents_refs.urls_from_reftokens(reftokens, map_reftoken_to_urls)
-            for reftokens in get_sents_refs.reftokens_for_sentences(
+            urls_from_reftokens(reftokens, map_reftoken_to_urls)
+            for reftokens in reftokens_for_sentences(
                 sentences,
-                get_sents_refs.strip_wikitext_markup(wikitext_with_refs)
+                strip_wikitext_markup(wikitext_with_refs)
             )
         ]
 
@@ -986,7 +964,7 @@ beyond, rescaled the avens to a higher point, and radio located a position to
             wikitext = '1\n  \t\n\n2\n'
             self.assertEqual(
                 '1\n\n2\n',
-                get_sents_refs.clean_wikitext(wikitext)
+                clean_wikitext(wikitext)
             )
 
 
@@ -999,7 +977,7 @@ class TestWikitextFile(unittest.TestCase):
             'night]] [[something else]]'
         )
         expect = u'[[File:Torre Pemex (5).jpg|thumb|right|250px|Torre Pemex at night]] [[something else]]'
-        actual = get_sents_refs.clean_wikitext(wikitext)
+        actual = clean_wikitext(wikitext)
         self.assertEqual(expect, actual)
 
     def test_remove_file_span_es(self):
@@ -1009,7 +987,7 @@ class TestWikitextFile(unittest.TestCase):
             'night]] [[something else]]'
         )
         expect = u'[[Archivo:Torre Pemex (5).jpg|thumb|right|250px|Torre Pemex at night]] [[something else]]'
-        actual = get_sents_refs.clean_wikitext(wikitext)
+        actual = clean_wikitext(wikitext)
         self.assertEqual(expect, actual)
 
 
@@ -1022,13 +1000,13 @@ class TestAllRefUrls(unittest.TestCase):
                 'http://www.excelsior.com.mx/2013/02/01/nacional/882114',
             ]
         }
-        actual, __ = get_sents_refs.collect_refs(wikitext)
+        actual, __ = collect_refs(wikitext)
         self.assertItemsEqual(expected_refs, actual)
 
     def test_extract_urls_from_ref(self):
         reftext = '[http://www.milenio.com/cdb/doc/noticias2011/bbebbb8a6449c0ec124e523f92db4102. Todos los lesionados fueron al Hospital Central de Pemex: Segob]'
         expected_urls = ['http://www.milenio.com/cdb/doc/noticias2011/bbebbb8a6449c0ec124e523f92db4102']
-        actual = get_sents_refs.extract_urls_from_ref(reftext)
+        actual = extract_urls_from_ref(reftext)
         self.assertEqual(expected_urls, actual)
 
     def test_collect_refs(self):
@@ -1044,7 +1022,7 @@ class TestAllRefUrls(unittest.TestCase):
                 'http://www.excelsior.com.mx/2013/02/01/nacional/882177',
             ]
         }
-        actual, __ = get_sents_refs.collect_refs(wikitext)
+        actual, __ = collect_refs(wikitext)
         print(actual)
         self.assertEqual(expected_refs, actual)
 
@@ -1057,7 +1035,7 @@ class TestStripWikitext(unittest.TestCase):
         """
         self.assertEqual(
             'Refs',
-            get_sents_refs.strip_wikitext_markup('==Refs==')
+            strip_wikitext_markup('==Refs==')
         )
 
     def test_last_newline_disappears(self):
@@ -1066,14 +1044,14 @@ class TestStripWikitext(unittest.TestCase):
         """
         self.assertEqual(
             'last line',
-            get_sents_refs.strip_wikitext_markup('last line\n')
+            strip_wikitext_markup('last line\n')
         )
 
 
 class TestScanner(unittest.TestCase):
 
     def setUp(self):
-        self.scanner = get_sents_refs.Scanner("foo bar")
+        self.scanner = Scanner("foo bar")
 
     @staticmethod
     def assign_neg1(scanner):
@@ -1101,11 +1079,11 @@ class TestScanner(unittest.TestCase):
         self.assertEqual(5, self.scanner.position)
 
     def test_set_invalid_position_too_large(self):
-        scanner = get_sents_refs.Scanner("")
+        scanner = Scanner("")
         self.assertRaises(ValueError, TestScanner.assign_5, scanner)
 
     def test_set_invalid_position_neg_value(self):
-        self.assertNotRaises(ValueError, TestScanner.assign_neg1, self.scanner)
+        TestScanner.assign_neg1(self.scanner)
 
     def test_rest(self):
         self.scanner.position = 5

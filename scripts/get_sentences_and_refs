@@ -1,0 +1,156 @@
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+
+# This script parses the wikitext for the specified Wikipedia article, and
+# outputs rendered plain text sentences, one per line. Also, for each sentence
+# that contained a <ref></ref> tag containing a "url" attribute, all such urls
+# follow the sentence, separated by the \t tab character.
+#
+# For usage details, run:
+#   ./get_sents_refs.py --help
+
+from wikimedia_article_sentences_refs import *
+
+
+def _handle_args(argv):
+    """
+    Use argparse module to handle command line arguments
+    """
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-l', '--language',
+        default=ENGLISH_LANG,
+        help='the language of the Wikipedia site.\n'
+             'Choices include en, es, etc.'
+    )
+    parser.add_argument(
+        'english_title',
+        help='the title of the page on the English Wikipedia site to be '
+             'processed'
+    )
+    parser.add_argument(
+        '--quoted',
+        action='store_true',
+        help='the title of the Wikipedia page already has special characters '
+             'replaced with the %%xx escape'
+    )
+    parser.add_argument(
+        '--logdir',
+        help='the directory where log files will be created.\n'
+             'BE CAREFUL: using this command will replace the entire supplied '
+             'directory if it already exists.'
+    )
+    return parser.parse_args(argv[1:])
+
+
+def main(argv):
+    args = _handle_args(argv)
+    language = args.language
+
+    if args.logdir:
+        if not os.path.isdir(args.logdir):
+            sys.stderr.write(
+                (
+                    'ERROR: The logdir "%s" does not exist.\n' % args.logdir
+                ).encode('utf-8')
+            )
+            sys.exit(2)
+
+    # Make sure this is the non-url-quoted title string.
+    if args.quoted:
+        english_title = urllib.unquote(args.english_title)
+    else:
+        english_title = args.english_title
+    english_title = unicode(english_title, encoding='utf-8')
+
+    # Get the redirected title if necessary.
+    english_title = redirected_title(english_title)
+
+    # Get the translated title if necessary.
+    if language == ENGLISH_LANG:
+        title = english_title
+    else:
+        title = translated_title(english_title, language)
+
+    # Download the page in wikitext format.
+    wikitext = scrape_wikitext(title, language, True)
+    write_log_file(args.logdir, english_title + '.orig-wikitext.log', wikitext)
+
+    # Since the result will be tab-separated text, remove all tabs from the
+    # source.
+    wikitext = clean_wikitext(wikitext)
+    write_log_file(args.logdir, english_title + '.clean-wikitext.log', wikitext)
+
+    # Scan through the wikitext, collecting a map of (named and unnamed) refs
+    # to urls, while also replacing each ref span with a token like
+    # coeref0 coeref1 etc. Then use wiki2plain again on this version.
+    map_reftoken_to_urls, wikitext_with_reftokens = collect_refs(wikitext)
+    write_log_file(
+        args.logdir,
+        english_title + '.map_reftoken_to_urls.log',
+        json.dumps(map_reftoken_to_urls, sort_keys=True, indent=2,
+                   separators=(',', ': '))
+    )
+    write_log_file(
+        args.logdir,
+        english_title + '.wikitext_with_reftokens.log',
+        wikitext_with_reftokens
+    )
+
+    # Ignore everything starting with the =References= heading
+    trunc_aft_refs = lambda x: truncate_lines_after_match(
+        r'^\s*=*\s*References\s*=*\s*$',
+        x
+    )
+    wikitext = trunc_aft_refs(wikitext)
+    wikitext_with_reftokens = trunc_aft_refs(wikitext_with_reftokens)
+
+    # Render a text-only representation of the page and sentence-split it.
+    sentences = split_sentences(strip_wikitext_markup(wikitext))
+    write_log_file(
+        args.logdir,
+        english_title + '.sentences.log',
+        '\n'.join(sentences) + '\n'
+    )
+
+    # Merge together each sentence and its URLs.
+    line_urls = [
+        urls_from_reftokens(reftokens, map_reftoken_to_urls)
+        for reftokens in reftokens_for_sentences(
+            sentences,
+            strip_wikitext_markup(wikitext_with_reftokens)
+        )
+    ]
+
+    assert len(sentences) == len(line_urls), (
+        'len(sentences) = {0}\n'
+        'len(line_urls) = {1}\n'
+    ).format(
+        len(sentences),
+        len(line_urls)
+    )
+
+    write_log_file(
+        args.logdir,
+        english_title + '.urls.log',
+        '\n'.join('\t'.join(urls) for urls in line_urls)
+    )
+
+    # Print a list of sentences, each with all its associated URLs separated
+    # by tabs.
+    line_strings = [
+        '{}\t{}'.format(
+            sentence,
+            '\t'.join(urls)
+        )
+        for sentence, urls in zip(sentences, line_urls)
+    ]
+
+    result_string = '\n'.join(line for line in line_strings)
+    return result_string
+
+
+if __name__ == '__main__':
+    result = main(sys.argv)
+    print(result.encode('utf-8'))
