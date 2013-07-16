@@ -11,6 +11,7 @@
 
 import argparse
 import codecs
+from collections import namedtuple
 import json
 import os
 import re
@@ -23,7 +24,6 @@ import wiki2plain
 import lxml.etree
 import nltk  # for now.
 from bs4 import BeautifulSoup
-from scanner import Scanner
 import mwparserfromhell
 import sanitize_html
 
@@ -358,111 +358,136 @@ def extract_urls_from_ref(wikitext, cit_url_attibutes_only=False):
                 result.append(url)
     return list(set(result))
 
-def urls_for_lines(sentences, map_reftoken_to_urls, plain_text_with_reftokens):
-    """
-    Creates a list of lists. Each inner list is the list of URLs corresponding
-    to the referenced citations for each line in the ``sentences`` argument.
 
-    After sentence splitting and tokenization, use the split tokens to scan the
-    plain text version that has inserted coeref tokens, and associate ref
-    citation urls with sentences.
-    """
-    result = []
+def _reftokens_for_sentence(sent_number, sentences, scanner):
+    reftokens = set()
+    sentence = sentences[sent_number]
+
+    # An empty sentence has no reftokens.
+    if not sentence:
+        return []
 
     # Build a list of lists of tokens by splitting each sentence by
     # non-alphabet into tokens. Skip the empty strings.
-    sent_tokens = [
-        [
+    tokens = [
+        token for token in re.split(r'\W+', sentence, flags=re.UNICODE)
+        if token
+    ]
+
+    if not tokens:
+        return []
+
+    # Get all the reftokens within the line.
+    ## Locate the first token within the line and move past it.
+    token = tokens[0]
+    scanner.position = scanner.index(token, scanner.position) + len(token)
+
+    next_chunk = ''
+    for token in tokens[1:]:
+        #from nose.tools import set_trace; set_trace()
+        wikitext_start = scanner.position
+        wikitext_end = scanner.index(token, wikitext_start)
+
+        next_chunk += scanner[wikitext_start:wikitext_end]
+
+        # Move past that token.
+        scanner.position = scanner.index(token, wikitext_end) + len(token)
+
+    # Scanner should now be at the end of the last token in the sentence.
+
+    # Get all the reftokens at the end of the line and at the beginning of the
+    # next line.
+
+    # Find next non-blank line if there is one, and
+    # add the first non-empty string token from that line.
+    last_token = None
+    for sent in sentences[sent_number + 1:]:
+        tokens = [
             token for token in re.split(r'\W+', sent, flags=re.UNICODE)
             if token
         ]
-        or ['']
-        for sent in sentences
-    ]
 
-    scanner = Scanner()
-    scanner.string = plain_text_with_reftokens
+        if tokens:
+            last_token = tokens[0]
+            break
 
-    for sent_number, sentence in enumerate(sentences):
+    if last_token:
+        # Get next chunk of wikitext
+        wikitext_start = scanner.position
+        wikitext_end = scanner.index(last_token, wikitext_start)
+        next_chunk += scanner[wikitext_start:wikitext_end]
+        # Don't move scanner past the last_token.
 
-        if sent_number == len(sent_tokens) - 1:
-            # Collect the urls for the last line of text.
-            flattened_urls_list = [
-                url
-                for reftoken in REFTOKEN_RE.findall(scanner.rest())
-                for url in map_reftoken_to_urls[reftoken]
-            ]
-            result.append(LineWithRefs(sentence, flattened_urls_list))
-            continue
+    else:
+        # Scan to end of wikitext, collecting reftokens
+        next_chunk += scanner.rest()
+        scanner.position = -1
 
-        if sent_tokens[sent_number] == ['']:
-            result.append(LineWithRefs())
-            continue
+    # Collect the reftokens
+    for reftoken in REFTOKEN_RE.findall(next_chunk):
+        reftokens.add(reftoken)
 
-        # Include the first word of the next sentence (if the next sentence is
-        # not empty):
-        else:
+    return list(reftokens)
 
-            # Scan through the plain text, matching the second token in the
-            # sentence through the first token of the following sentence.
-            # Assume there are no refs before the first word in the first sentence.
-            tokens = sent_tokens[sent_number][1:]
 
-            urls = set()
+class Scanner(unicode):
 
-            if sent_tokens[sent_number + 1]:
-                if sent_tokens[sent_number + 1] == ['']:
-                    tokens.append('\n\s*\n')
-                else:
-                    tokens.append(sent_tokens[sent_number + 1][0])
+    def __init__(self, content):
+        self._position = 0
+        return super(Scanner, self).__init__(content)
 
-            for token_idx, token in enumerate(tokens):
-                #token_re = re.compile(token, re.UNICODE | re.MULTILINE)
-                token_re = re.compile(token, re.UNICODE)
+    @property
+    def position(self):
+        return self._position
 
-                # Get all the text until this token is matched.
-                # Collect the reftokens in this range.
+    @position.setter
+    def position(self, value):
+        if value > len(self) - 1:
+            raise ValueError(
+                "position cannot be higher than the length of the string."
+            )
+            return
+        self._position = value
 
-                if scanner.check_to(token_re) is None:
-                    sys.stderr.write(
-                        (
-                            '\ncan\'t find token "%s".\n' % token_re.pattern
-                        ).encode('utf-8')
-                    )
-                    continue
-                    # sys.exit(
-                    #     '\nERROR: can\'t find token "{}". Everything after "{}" '
-                    #     'is:\n{}'.format(
-                    #         token_re.pattern,
-                    #         token_re.pattern,
-                    #         scanner.rest().encode('utf-8')
-                    #     )
-                    # )
+    def rest(self):
+        """
+        Returns a str with the contents of the Scanner from the
+        Scanner.position to the end.
+        """
+        return self[self.position:]
 
-                next_chunk = scanner.scan_to(token_re)
 
-                # Move the scanner ahead, and make an assertion.
-                #assert scanner.scan(token_re) is not None
-                scanner.scan(token_re)
-                next_chunk += token
+def urls_from_reftokens(reftokens, map_reftoken_to_urls):
+    """
+    Replace the reftokens with URLs.
+    """
+    urls = set()
+    for reftoken in reftokens:
+        for url in map_reftoken_to_urls[reftoken]:
+            urls.add(url)
 
-                if sent_number == len(sent_tokens) - 1:
-                    if token_idx == len(sent_tokens[sent_number]) - 1:
-                        # Handle the remaining text after the final token:
-                        next_chunk += scanner.rest()
-                        assert next_chunk is not None
+    return list(urls)
 
-                # Collect the urls for this line of text.
-                flattened_urls_list = [
-                    url
-                    for reftoken in REFTOKEN_RE.findall(next_chunk)
-                    for url in map_reftoken_to_urls[reftoken]
-                ]
-                urls.update(flattened_urls_list)
 
-            result.append(LineWithRefs(sentence, urls))
+def reftokens_for_sentences(sentences, plain_text_with_reftokens):
+    result = []
+    scanner = Scanner(plain_text_with_reftokens)
+
+    # Collect reftokens for each sentence.
+    for sent_number in range(len(sentences)):
+
+        reftokens = _reftokens_for_sentence(
+            sent_number,
+            sentences,
+            scanner
+        )
+        result.append(reftokens)
+
+        if scanner.position == -1:
+            break
 
     return result
+
 
 def prune_lines(sentences_and_refurls):
     """
@@ -601,13 +626,21 @@ def main(argv):
     )
 
     # Merge together each sentence and its URLs.
-    line_urls = urls_for_lines(
-        sentences,
-        map_reftoken_to_urls,
-        strip_wikitext_markup(wikitext_with_reftokens)
-    )
+    line_urls = [
+        urls_from_reftokens(reftokens, map_reftoken_to_urls)
+        for reftokens in reftokens_for_sentences(
+            sentences,
+            strip_wikitext_markup(wikitext_with_reftokens)
+        )
+    ]
 
-    assert len(sentences) == len(line_urls)
+    assert len(sentences) == len(line_urls), (
+        'len(sentences) = {0}\n'
+        'len(line_urls) = {1}\n'
+    ).format(
+        len(sentences),
+        len(line_urls)
+    )
 
     write_log_file(
         args.logdir,

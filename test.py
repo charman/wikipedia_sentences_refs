@@ -1,12 +1,8 @@
 # -*- encoding: utf-8 -*-
-import get_sents_refs
-import re
 import unittest
-import sys
-from bs4 import BeautifulSoup
-from scanner import Scanner
+import get_sents_refs
+from get_sents_refs import re, sys, wiki2plain, BeautifulSoup, Scanner
 #from ddt import ddt, data
-import wiki2plain
 
 def parallel_print(list1, list2):
     list1.extend(["", ""])
@@ -434,31 +430,6 @@ Work restarted in 2000 when divers who were keen on a quick route to the sump be
 ==References==
 """
 
-result_Aquamole_Pot = [[], [], [], [], [u'http://www.wildplaces.co.uk/descent/descent168.html'], [], [u'http://www.wildplaces.co.uk/descent/descent168.html'], []]
-
-#@ddt
-class Test(unittest.TestCase):
-
-    # @data(
-    #     (text_Aquamole_Pot_no_url, text_Aquamole_Pot_no_url_without_ref),
-    #     )
-
-    def test_get_next_chunk(self):
-        scanner = Scanner()
-        expect = u""" Avens.<ref>{{cite journal
- | author = Ian Watson
- | year = 1980
- | month = April
- | title = Kingsdale master cave, Yorkshire, Jingling Avens, Late reports W\u006Frk
- | journal = [[Cave Diving Group|Cave diving group newsletter]]
- | issue = New series No.59
- | pages = page 12–13
- | url = http://www.wildplaces.co.uk/descent/descent168.html
- }}</ref>
-
-W\u006Frk"""
-
-
 class TestComplicatedRefs(unittest.TestCase):
 
     maxDiff = None
@@ -729,6 +700,7 @@ class TestAquamolePotSentences(unittest.TestCase):
         actual = get_sents_refs.split_sentences(text)
         self.assertEqual(expect, actual)
 
+
 class TestSimple(unittest.TestCase):
 
     def setUp(self):
@@ -738,8 +710,18 @@ class TestSimple(unittest.TestCase):
             u'Bar<ref name="ref 0">{{cite journal | url="http://testurl0"}}</ref>baz.',
             u'',
             u"Hello, world. What's up?",
-            u'biz<ref name="ref 0">{{cite journal | url = "http://testurl3"}}</ref>',
-            u'<ref name ="ref 1">{{cite journal | url = "http://testurl1"}}</ref>bang',
+            (
+                u'biz<ref name="ref 0">'
+                u'{{cite journal | url = "http://testurl3"}}'
+                u'</ref>'
+            ),
+            (
+                u'<ref name ="ref 1">'
+                u'{{cite journal | url = "http://testurl1"}}</ref>'
+                u'<ref name ="ref 3">'
+                u'{{cite journal | url = "http://testurl4"}}'
+                u'</ref>bang'
+            ),
         ]
         self.wikitext = '\n'.join(wikitext) + '\n'
 
@@ -754,22 +736,33 @@ class TestSimple(unittest.TestCase):
             u' bang',
         ]
 
-        wikitext = [
-            u'Foo. coeref0000 ',
-            u'',
-            u'Bar coeref0001 baz.',
-            u'',
-            u"Hello, world. What's up?",
-            u'biz coeref0001 ',
-            u' coeref0002 bang',
-        ]
-        self.wikitext_with_reftokens = u'\n'.join(wikitext) + '\n'
+        self.wikitext_with_reftokens = (
+            u'Foo. coeref0000 \n'           # 17
+            u'\n'                           # 1
+            u'Bar coeref0001 baz.\n'        # 20
+            u'\n'                           # 1
+            u"Hello, world. What's up?\n"   # 25
+            u'biz coeref0001 \n'            # 16
+            u' coeref0002  coeref0003 bang\n'           # 17
+        )
 
         self.expected_map_reftoken_to_urls = {
             'coeref0000': [u'testurl0'],
             'coeref0001': [u'testurl0', u'testurl3'],
             'coeref0002': [u'testurl1'],
+            'coeref0003': [u'testurl4'],
         }
+
+        self.expected_reftokens_list = [
+            [u'coeref0000'],
+            [],
+            [u'coeref0001'],
+            [],
+            [],
+            [],
+            [u'coeref0001', u'coeref0002', u'coeref0003'],
+            []
+        ]
 
         self.expected_urls_list = [
             [u'testurl0'],
@@ -778,9 +771,95 @@ class TestSimple(unittest.TestCase):
             [],
             [],
             [],
-            [u'testurl0', u'testurl3', u'testurl1'],
+            [u'testurl0', u'testurl3', u'testurl1', u'testurl4'],
             []
         ]
+
+    def test_reftokens_for_sentence_0(self):
+        scanner = Scanner(self.wikitext_with_reftokens)
+        scanner.position = 0
+
+        # 1st sentence
+        expect = ['coeref0000']
+        actual = get_sents_refs._reftokens_for_sentence(
+            0,
+            self.sentences,
+            scanner
+        )
+        self.assertEqual(expect, actual)
+        print(scanner.position)
+
+    def test_reftokens_for_sentence_1(self):
+        scanner = Scanner(self.wikitext_with_reftokens)
+        scanner.position = 18
+
+        # 2nd sentence
+        expect = []
+        actual = get_sents_refs._reftokens_for_sentence(
+            1,
+            self.sentences,
+            scanner
+        )
+        self.assertEqual(expect, actual)
+        print(scanner.position)
+
+    def test_reftokens_for_sentence_2(self):
+        scanner = Scanner(self.wikitext_with_reftokens)
+        scanner.position = 18
+
+        # 3rd sentence
+        expect = ['coeref0001']
+        actual = get_sents_refs._reftokens_for_sentence(
+            2,
+            self.sentences,
+            scanner
+        )
+        self.assertEqual(expect, actual)
+        print(scanner.position)
+
+    def test_reftokens_for_sentence_3(self):
+        scanner = Scanner(self.wikitext_with_reftokens)
+        scanner.position = 39
+
+        # 4th, 5th, 6th sentences
+        expect = []
+        for i in [3, 4, 5]:
+            actual = get_sents_refs._reftokens_for_sentence(
+                i,
+                self.sentences,
+                scanner
+            )
+            self.assertEqual(expect, actual)
+            print(scanner.position)
+
+    def test_reftokens_for_sentence_4(self):
+        scanner = Scanner(self.wikitext_with_reftokens)
+        scanner.position = 39
+
+        # 7th sentence
+        expect = [u'coeref0001', u'coeref0002', u'coeref0003']
+        actual = get_sents_refs._reftokens_for_sentence(
+            6,
+            self.sentences,
+            scanner
+        )
+        self.assertItemsEqual(expect, actual)
+        print(scanner.position)
+
+    def test_reftokens_for_sentence_5(self):
+        scanner = Scanner(self.wikitext_with_reftokens)
+        scanner.position = 53
+
+        # 8th sentence
+        expect = []
+        actual = get_sents_refs._reftokens_for_sentence(
+            7,
+            self.sentences,
+            scanner
+        )
+        self.assertItemsEqual(expect, actual)
+        print(scanner.position)
+
 
     def test_map_reftoken_to_urls(self):
         self.assertItemsEqual(
@@ -794,20 +873,28 @@ class TestSimple(unittest.TestCase):
         self.assertEqual(expect, actual
         )
 
-    def test_urls_list(self):
-        result = get_sents_refs.urls_for_lines(
+    def test_reftokens_list(self):
+        expect = self.expected_reftokens_list
+        expect = map(sorted, expect)
+        actual = get_sents_refs.reftokens_for_sentences(
             self.sentences,
-            self.expected_map_reftoken_to_urls,
             self.wikitext_with_reftokens
         )
+        actual = map(sorted, actual)
+        self.assertItemsEqual(expect, actual)
 
-        print(result)
+    def test_urls_list(self):
         expect = self.expected_urls_list
-        self.assertEqual(len(expect), len(result))
-        actual = [line.urls for line in result]
-        self.assertEqual(len(expect), len(actual))
-        for i in range(len(expect)):
-            self.assertItemsEqual(expect[i], actual[i])
+        expect = map(sorted, expect)
+        actual = [
+            get_sents_refs.urls_from_reftokens(
+                line,
+                self.expected_map_reftoken_to_urls
+            )
+            for line in self.expected_reftokens_list
+        ]
+        actual = map(sorted, actual)
+        self.assertItemsEqual(expect, actual)
 
 
 class TestFixParagraphBoundaries(unittest.TestCase):
@@ -876,24 +963,21 @@ beyond, rescaled the avens to a higher point, and radio located a position to
             'coeref0000': ['http://www.wildplaces.co.uk/descent/descent168.html']
         }
 
-        result = get_sents_refs.urls_for_lines(
-            sentences,
-            map_reftoken_to_urls,
-            get_sents_refs.strip_wikitext_markup(wikitext_with_refs)
-        )
+        result = [
+            get_sents_refs.urls_from_reftokens(reftokens, map_reftoken_to_urls)
+            for reftokens in get_sents_refs.reftokens_for_sentences(
+                sentences,
+                get_sents_refs.strip_wikitext_markup(wikitext_with_refs)
+            )
+        ]
 
         self.assertEqual(
-            result[6].urls,
+            result[6],
             []
         )
 
         self.assertEqual(
-            result[6].sentence[:6],
-            'Having'
-        )
-
-        self.assertEqual(
-            result[9].urls,
+            result[9],
             ['http://www.wildplaces.co.uk/descent/descent168.html']
         )
 
@@ -986,29 +1070,46 @@ class TestStripWikitext(unittest.TestCase):
         )
 
 
-class TestSimpleUrlsForLines(unittest.TestCase):
+class TestScanner(unittest.TestCase):
 
     def setUp(self):
-        self.line_urls = get_sents_refs.urls_for_lines(
-            ['a'],
-            {'coeref0000': ['url0']},
-            'a coeref0000',
-        )
+        self.scanner = get_sents_refs.Scanner("foo bar")
 
-    def test_len(self):
-        expect = 1
-        actual = len(self.line_urls)
-        self.assertEqual(expect, actual)
+    @staticmethod
+    def assign_neg1(scanner):
+        try:
+            scanner.position = -1
+        except ValueError as e:
+            raise e
 
-    def test_sentence(self):
-        expect = 'a'
-        actual = self.line_urls[0].sentence
-        self.assertEqual(expect, actual)
+    @staticmethod
+    def assign_5(scanner):
+        try:
+            scanner.position = 5
+        except ValueError as e:
+            raise e
 
-    def test_url(self):
-        expect = ['url0']
-        actual = self.line_urls[0].urls
-        self.assertEqual(expect, actual)
+    def test_init(self):
+        self.assertEqual(0, self.scanner.position)
+
+    def test_set_valid_position(self):
+        self.scanner.position = 5
+        self.assertEqual(5, self.scanner.position)
+
+    def test_set_valid_position_inside_method(self):
+        TestScanner.assign_5(self.scanner)
+        self.assertEqual(5, self.scanner.position)
+
+    def test_set_invalid_position_too_large(self):
+        scanner = get_sents_refs.Scanner("")
+        self.assertRaises(ValueError, TestScanner.assign_5, scanner)
+
+    def test_set_invalid_position_neg_value(self):
+        self.assertNotRaises(ValueError, TestScanner.assign_neg1, self.scanner)
+
+    def test_rest(self):
+        self.scanner.position = 5
+        self.assertEqual("ar", self.scanner.rest())
 
 
 if __name__ == '__main__':
