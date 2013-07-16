@@ -451,7 +451,7 @@ class Scanner(unicode):
 
     def rest(self):
         """
-        Returns a str with the contents of the Scanner from the
+        Returns a unicode object with the contents of the Scanner from the
         Scanner.position to the end.
         """
         return self[self.position:]

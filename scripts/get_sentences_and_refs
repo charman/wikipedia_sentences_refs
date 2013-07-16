@@ -140,9 +140,9 @@ def main(argv):
     # Print a list of sentences, each with all its associated URLs separated
     # by tabs.
     line_strings = [
-        '{}\t{}'.format(
+        u'{0}\t{1}'.format(
             sentence,
-            '\t'.join(urls)
+            u'\t'.join(urls)
         )
         for sentence, urls in zip(sentences, line_urls)
     ]
