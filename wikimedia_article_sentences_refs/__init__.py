@@ -8,6 +8,7 @@ from lib import (
     fix_paragraph_boundaries,
     fixup_named_refs,
     json,
+    os,
     prune_lines,
     redirected_title,
     reftokens_for_sentences,
@@ -17,6 +18,7 @@ from lib import (
     sys,
     translated_title,
     truncate_lines_after_match,
+    urllib,
     urls_from_reftokens,
     write_log_file,
 )
@@ -31,6 +33,7 @@ __all__ = (
     'fix_paragraph_boundaries',
     'fixup_named_refs',
     'json',
+    'os',
     'prune_lines',
     'redirected_title',
     'reftokens_for_sentences',
@@ -40,6 +43,7 @@ __all__ = (
     'sys',
     'translated_title',
     'truncate_lines_after_match',
+    'urllib',
     'urls_from_reftokens',
     'write_log_file',
 )
