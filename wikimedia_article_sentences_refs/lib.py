@@ -221,8 +221,14 @@ def fixup_named_refs(wikitext):
     """
     Replace named ref tags with bad syntax like <ref name=something/> with
     better syntax, like <ref name="something" />.
+    >>> fixup_named_refs('.<ref name=pais/><ref name=mundo/><ref name=vilaweb>{')
+    '.<ref name="pais" /><ref name="mundo" /><ref name=vilaweb>{'
     """
-    named_openclose_reftag_re = re.compile(r'<\s*ref\s*name\s*=\s*([^\s]+)/>')
+    named_openclose_reftag_re = re.compile(
+        r'<\s*ref\s*name\s*=\s*([^\s]+)/>',
+        flags=(re.MULTILINE | re.UNICODE)
+    )
+
     repl = r'<ref name="\1" />'
     return named_openclose_reftag_re.sub(repl, wikitext)
 
@@ -249,21 +255,30 @@ def collect_refs(wikitext, cit_url_attibutes_only=False):
 
     for ref in refs:
 
+        #from nose.tools import set_trace; set_trace() ## TEMP
+
+        name = None
+        if 'name' in ref.attrs.keys():
+            name = unicode(ref.attrs['name'])
+
         # Collect all the citations' urls inside the ref tag span.
         urls = extract_urls_from_ref(
             unicode(ref.string),
             cit_url_attibutes_only
         )
-        name = None
-        if 'name' in ref.attrs:
-            name = unicode(ref.attrs['name'])
 
-        if not name and not urls:
+        if not urls:
             ref.replace_with(' ')
             continue
 
         # Create a new reftoken if necessary.
-        if not name in map_refnames_to_reftokens.keys():
+        need_new_reftoken = (
+            name is None
+            or
+            name not in map_refnames_to_reftokens.keys()
+        )
+
+        if need_new_reftoken:
             reftoken = 'coeref{0:04d}'.format(reftokens_count)
             reftokens_count += 1
             if name:
@@ -309,7 +324,8 @@ def extract_urls_from_ref(wikitext, cit_url_attibutes_only=False):
                 # Urls are being returned with '|.*' following the url,
                 # so strip that away.
                 url = url.split('|')[0]
-                result.append(url)
+                if url:
+                    result.append(url)
     return list(set(result))
 
 
@@ -449,8 +465,6 @@ def urls_from_reftokens(reftokens, map_reftoken_to_urls):
 
 
 def reftokens_for_sentences(sentences, plain_text_with_reftokens):
-    #from nose.tools import set_trace; set_trace()  # TEMP
-
     result = []
     wikitext_tokens = [
         token for token in re.split(
@@ -459,8 +473,6 @@ def reftokens_for_sentences(sentences, plain_text_with_reftokens):
         if token
     ]
     scanner = TokenScanner(wikitext_tokens)
-
-    #set_trace()  # TEMP
 
     # Collect reftokens for each sentence.
     for sent_number in range(len(sentences)):
@@ -540,7 +552,6 @@ def write_log_file(logdir, filename, text):
     filename = unicodedata.normalize('NFKD', filename).encode('ascii','ignore')
     filename = re.sub(r'["\'?\s]', '_', filename)
     if logdir:
-        with codecs.open(os.path.join(logdir, filename),
-                         'w', 'utf-8-sig') as f:
+        with codecs.open(os.path.join(logdir, filename), 'w', 'utf-8') as f:
             f.write(text)
 

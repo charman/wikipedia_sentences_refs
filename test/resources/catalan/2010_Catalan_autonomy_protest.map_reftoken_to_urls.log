@@ -1,0 +1,63 @@
+﻿{
+
+  # 1 3cat24
+  "coeref0000": [
+    "http://www.3cat24.cat/especial/211/altres/El-TC-dicta-sentencia-per-lEstatut"
+  ],
+
+  # 2 vilaweb01
+  "coeref0001": [
+    "http://www.vilaweb.cat/noticia/3752923/lectura-sentencia-confirma-pitjors-presagis.html"
+  ],
+
+  # 3
+  "coeref0002": [
+    "http://www.elperiodico.cat/ca/noticias/politica/20100629/rebaixa-llisto-lestatut/355010.shtml"
+  ],
+
+  # 4 pais
+  "coeref0003": [
+    "http://www.elpais.com/articulo/espana/Decenas/miles/catalanes/echan/calle/recorte/Estatuto/elpepuesp/20100710elpepunac_8/Tes"
+  ],
+
+  # 5 mundo
+  "coeref0004": [
+    "http://www.elmundo.es/elmundo/2010/07/10/barcelona/1278761492.html?a=421c64b4288221f603d1786edcbf3a7a&t=1278802043&numero="
+  ],
+
+  # 6
+  "coeref0005": [
+    "http://www.elperiodico.cat/ca/noticias/politica/20100710/catalunya-respon-avui-carrer-sentencia-del-constitucional/379443.shtml"
+  ],
+
+  # 7
+  "coeref0006": [
+    "http://www.3cat24.cat/noticia/747966/politica/Tots-els-partits-tret-del-PP-i-Ciutadans-se-sumen-a-la-manifestacio-del-10-de-juliol-contra-la-sentencia"
+  ],
+
+  # 8 reus
+  "coeref0007": [
+    "http://www.reusdigital.cat/index.php?command=show_news&news_id=14033"
+  ],
+
+  # 9 periodico
+  "coeref0008": [
+    "http://www.elperiodico.cat/ca/noticias/politica/20100710/manifestacio-desbordat-totes-les-previsions/379832.shtml"
+  ],
+
+  # 10 som
+  "coeref0009": [
+    "http://www.somunanacio.cat/ca/noticia/ja-podeu-consultar-les-darreres-entitats-adherides-4287.html"
+  ],
+
+  # 11 vilaweb
+  "coeref0010": [
+    "http://www.vilaweb.cat/noticia/3753345/arrenca-multitudinaria-manifestacio-sentencia-estatut.html"
+  ],
+
+  # 12 citar
+  "coeref0011": [
+    "http://avui.elpunt.cat/noticia/article/3-politica/17-politica/193699-mes-dun-milio-de-veus-pel-dret-a-decidir.html"
+  ]
+
+}
