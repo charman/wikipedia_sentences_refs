@@ -360,7 +360,8 @@ def extract_urls_from_ref(wikitext, cit_url_attibutes_only=False):
 
 
 def _reftokens_for_sentence(sent_number, sentences, scanner):
-    reftokens = set()
+    sentence_wikitext = []
+
     sentence = sentences[sent_number]
 
     # An empty sentence has no reftokens.
@@ -377,21 +378,37 @@ def _reftokens_for_sentence(sent_number, sentences, scanner):
     if not tokens:
         return []
 
-    # Get all the reftokens within the line.
+    # Collection of the text parts between tokens in the split sentences:
+
     ## Locate the first token within the line and move past it.
     token = tokens[0]
-    scanner.position = scanner.index(token, scanner.position) + len(token)
+    try:
+        token_start = scanner.index(token)
+        if token_start == len(scanner) - 1:
+            scanner.position = -1
+            return []
+        elif token_start < len(scanner) - 1:
+            # Ignore all the wikitext in front of the first token of the
+            # sentence.
+            scanner.position = token_start + 1
+    except:
+        pass
 
-    next_chunk = ''
+    ## Get all the other reftokens within the line.
     for token in tokens[1:]:
-        #from nose.tools import set_trace; set_trace()
         wikitext_start = scanner.position
-        wikitext_end = scanner.index(token, wikitext_start)
+        try:
+            wikitext_end = scanner.index(token)
+        except:
+            # Couldn't find this token, so skip it.
+            sys.stderr.write('Couldn\'t find the token "%s"\n' % token)
+            continue
 
-        next_chunk += scanner[wikitext_start:wikitext_end]
+        sentence_wikitext.extend(scanner[wikitext_start:wikitext_end])
 
         # Move past that token.
-        scanner.position = scanner.index(token, wikitext_end) + len(token)
+        if wikitext_end < len(scanner) - 1:
+            scanner.position = wikitext_end + 1
 
     # Scanner should now be at the end of the last token in the sentence.
 
@@ -414,27 +431,36 @@ def _reftokens_for_sentence(sent_number, sentences, scanner):
     if last_token:
         # Get next chunk of wikitext
         wikitext_start = scanner.position
-        wikitext_end = scanner.index(last_token, wikitext_start)
-        next_chunk += scanner[wikitext_start:wikitext_end]
+        try:
+            wikitext_end = scanner.index(last_token)
+            sentence_wikitext.extend(scanner[wikitext_start:wikitext_end])
         # Don't move scanner past the last_token.
+        except:
+            pass
 
     else:
         # Scan to end of wikitext, collecting reftokens
-        next_chunk += scanner.rest()
+        sentence_wikitext.extend(scanner[scanner.position:])
         scanner.position = -1
 
     # Collect the reftokens
-    for reftoken in REFTOKEN_RE.findall(next_chunk):
+    reftokens = set()
+    for reftoken in REFTOKEN_RE.findall(' '.join(sentence_wikitext)):
         reftokens.add(reftoken)
 
     return list(reftokens)
 
 
-class Scanner(unicode):
+class TokenScanner(list):
+    """
+    A TokenScanner is meant to store a list of unicode objects.
+    the position property can be used to store the current index as the object
+    is used to scan through the list of tokens.
+    """
 
     def __init__(self, content):
         self._position = 0
-        return super(Scanner, self).__init__(content)
+        return super(TokenScanner, self).__init__(content)
 
     @property
     def position(self):
@@ -444,9 +470,8 @@ class Scanner(unicode):
     def position(self, value):
         if value > len(self) - 1:
             raise ValueError(
-                "position cannot be higher than the length of the string."
+                "position cannot be greater than the length of the string."
             )
-            return
         self._position = value
 
     def rest(self):
@@ -470,8 +495,18 @@ def urls_from_reftokens(reftokens, map_reftoken_to_urls):
 
 
 def reftokens_for_sentences(sentences, plain_text_with_reftokens):
+    #from nose.tools import set_trace; set_trace()  # TEMP
+
     result = []
-    scanner = Scanner(plain_text_with_reftokens)
+    wikitext_tokens = [
+        token for token in re.split(
+            r'\W+', plain_text_with_reftokens, flags=re.UNICODE
+        )
+        if token
+    ]
+    scanner = TokenScanner(wikitext_tokens)
+
+    #set_trace()  # TEMP
 
     # Collect reftokens for each sentence.
     for sent_number in range(len(sentences)):

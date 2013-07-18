@@ -1,6 +1,6 @@
 from lib import (
     ENGLISH_LANG,
-    Scanner,
+    TokenScanner,
     argparse,
     clean_wikitext,
     collect_refs,
@@ -25,7 +25,7 @@ from lib import (
 
 __all__ = (
     'ENGLISH_LANG',
-    'Scanner',
+    'TokenScanner',
     'argparse',
     'clean_wikitext',
     'collect_refs',
