@@ -1,21 +1,6 @@
-#!/usr/bin/env python
-# -*- encoding: utf-8 -*-
-
-# This script parses the wikitext for the specified Wikipedia article, and
-# outputs rendered plain text sentences, one per line. Also, for each sentence
-# that contained a <ref></ref> tag containing a "url" attribute, all such urls
-# follow the sentence, separated by the \t tab character.
-#
-# For usage details, run:
-#   ./get_sents_refs.py --help
-
-import argparse
 import codecs
-from collections import namedtuple
-import json
 import os
 import re
-import shutil
 import sys
 import urllib
 import urllib2
@@ -61,37 +46,6 @@ class LineWithRefs(object):
             'urls: %s' % self.urls,
         )
 
-
-def _handle_args(argv):
-    """
-    Use argparse module to handle command line arguments
-    """
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-l', '--language',
-        default=ENGLISH_LANG,
-        help='the language of the Wikipedia site.\n'
-             'Choices include en, es, etc.'
-    )
-    parser.add_argument(
-        'english_title',
-        help='the title of the page on the English Wikipedia site to be '
-             'processed'
-    )
-    parser.add_argument(
-        '--quoted',
-        action='store_true',
-        help='the title of the Wikipedia page already has special characters '
-             'replaced with the %%xx escape'
-    )
-    parser.add_argument(
-        '--logdir',
-        help='the directory where log files will be created.\n'
-             'BE CAREFUL: using this command will replace the entire supplied '
-             'directory if it already exists.'
-    )
-    return parser.parse_args(argv[1:])
 
 def scrape_wikitext(title, lang=ENGLISH_LANG, expand_templates=False):
     params = {
