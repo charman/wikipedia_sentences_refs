@@ -1,6 +1,6 @@
 import unittest
-from wikimedia_article_sentences_refs import *
-from wikimedia_article_sentences_refs.lib import _reftokens_for_sentence
+from mediawiki_article_sentences_refs import *
+from mediawiki_article_sentences_refs.lib import _reftokens_for_sentence
 
 
 class TestTokenScannerClass(unittest.TestCase):

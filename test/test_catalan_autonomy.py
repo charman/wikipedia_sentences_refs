@@ -1,6 +1,6 @@
 # -*- encoding: utf-8 -*-
 import unittest
-from wikimedia_article_sentences_refs import *
+from mediawiki_article_sentences_refs import *
 
 
 class Test1(unittest.TestCase):

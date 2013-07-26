@@ -1,5 +1,5 @@
 import unittest
-from wikimedia_article_sentences_refs import *
+from mediawiki_article_sentences_refs import *
 
 CATALAN_DIR = 'test/resources/catalan'
 log_filenames = (

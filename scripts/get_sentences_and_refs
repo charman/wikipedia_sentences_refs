@@ -12,7 +12,7 @@ import argparse
 import json
 import os
 import sys
-from wikimedia_article_sentences_refs import *
+from mediawiki_article_sentences_refs import *
 
 
 def _handle_args(argv):
