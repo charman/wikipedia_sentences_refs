@@ -12,6 +12,8 @@ import argparse
 import json
 import os
 import sys
+import urllib
+
 from mediawiki_article_sentences_refs import *
 
 
