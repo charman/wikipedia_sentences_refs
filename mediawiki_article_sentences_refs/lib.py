@@ -47,7 +47,7 @@ class LineWithRefs(object):
         )
 
 
-def scrape_wikitext(title, lang=ENGLISH_LANG, expand_templates=False):
+def scrape_wikitext(title, lang=ENGLISH_LANG, expand_templates=False, revision_timestamp=False):
     params = {
         "format": "xml",
         "action": "query",
@@ -58,6 +58,10 @@ def scrape_wikitext(title, lang=ENGLISH_LANG, expand_templates=False):
     }
     if expand_templates:
         params['rvexpandtemplates'] = ''
+    if revision_timestamp:
+        # MediaWiki accepts several different formats of timestamps:
+        #   http://www.mediawiki.org/wiki/API:Data_formats#Timestamps
+        params['rvstart'] = revision_timestamp
     params["titles"] = "%s" % urllib.quote(title.encode('utf-8'))
     qs = "&".join("%s=%s" % (k, v)  for k, v in params.items())
     url = "http://%s.wikipedia.org/w/api.php?%s" % (lang, qs)

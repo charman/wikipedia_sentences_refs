@@ -44,6 +44,11 @@ def _handle_args(argv):
              'BE CAREFUL: using this command will replace the entire supplied '
              'directory if it already exists.'
     )
+    parser.add_argument(
+        '--timestamp',
+        help='Timestamp for the version of the article to retrieve '
+             'http://www.mediawiki.org/wiki/API:Data_formats#Timestamps'
+    )
     return parser.parse_args(argv[1:])
 
 
@@ -77,7 +82,10 @@ def main(argv):
         title = translated_title(english_title, language)
 
     # Download the page in wikitext format.
-    wikitext = scrape_wikitext(title, language, True)
+    if args.timestamp:
+        wikitext = scrape_wikitext(title, language, True, args.timestamp)
+    else:
+        wikitext = scrape_wikitext(title, language, True)
     write_log_file(args.logdir, english_title + '.orig-wikitext.log', wikitext)
 
     # Since the result will be tab-separated text, remove all tabs from the
